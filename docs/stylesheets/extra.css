@@ -1,0 +1,37 @@
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.divisao{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.botao{
+    margin: 20px;
+    margin-top: 20px;
+    width: 115px;
+    height: 40px;
+    border-radius: 12px;
+    background-color: #FFFFFF;
+    transition: all 0.1s ease-out;
+}
+.ancora{
+    text-decoration: none;
+    color: #000000;
+    font-size: 16px;
+    font-weight: 500;
+    font-family: 'Roboto';
+}
+.botao:hover{
+    transform: translateY(-5px);
+    cursor: pointer;
+    box-shadow: 3px 3px 15px 0px #5F1FE5;
+    border: 1px solid #5F1FE5;
+}
+.ancora:hover{
+    color: #5F1FE5;
+}
