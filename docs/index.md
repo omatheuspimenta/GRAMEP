@@ -1,8 +1,6 @@
 ![logo](assets/logo.png){width="500" .center}
 # GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle
 
-## Corrected and improved text:
-
 **GRAMEP** is a powerful, Python-based tool designed for the precise identification of Single Nucleotide Polymorphisms (SNPs) within biological sequences.  It goes beyond basic SNP identification, offering advanced functionalities including:
 
 * **Intersection analysis:** Analyze mutations found in different variants to identify shared mutations.
