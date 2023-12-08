@@ -268,6 +268,7 @@ def make_report(
 
             if len(annotation_index) > 0:
                 for index_element in annotation_index:
+                    report_line = str()
                     if (
                         annotation_dataframe.loc[index_element]['product']
                         is None

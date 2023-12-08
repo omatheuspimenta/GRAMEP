@@ -220,7 +220,7 @@ class Messages:
 
         Removed sequence
         """
-        log_text.info(':exclamation: Removed sequence %s', string)
+        log_text.warning(':exclamation: Removed sequence %s', string)
 
     def info_start_prediction(self):
         """Messages.
@@ -387,3 +387,6 @@ class Messages:
         log_text.error(
             ':x: Please select one of palettes for colorPalette option'
         )
+
+    def warning_removed_sequences(self, string):
+        log_text.warning(':warning: Removed %s sequences.', string)

@@ -159,14 +159,17 @@ def run_load_sequences(
     #     for key, value in kmers_freq(sequence[0], word, step).items():
     #         seq_kmer[key] += value
     # return seq_kmer
-
+    removed_seq = 0
     seq_kmer = defaultdict(int)
     seq = str(sequence.seq).upper()
     if re.search(alphabet, seq) is not None:
         message.info_removed_seq(sequence.name)
+        removed_seq += 1
     else:
         for key, value in kmers_freq(seq, word, step).items():
             seq_kmer[key] += value
+    if removed_seq > 0:
+        message.warning_removed_sequences(removed_seq)
     return seq_kmer
 
 
