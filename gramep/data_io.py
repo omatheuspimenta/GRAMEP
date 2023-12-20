@@ -172,7 +172,6 @@ def run_load_sequences(
         message.warning_removed_sequences(removed_seq)
     return seq_kmer
 
-
 # def run_buffer_sequences(seq: SeqRecord.SeqRecord) -> tuple[str, str]:
 #     """
 #     Run buffer a sequence and its name.
@@ -190,7 +189,6 @@ def run_load_sequences(
 #         and the sequence name.
 #     """
 #     return (str(seq.seq).upper(), seq.name)
-
 
 def buffer_sequences(
     sequence_path: str, reference: bool = False
