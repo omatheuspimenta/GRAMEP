@@ -25,7 +25,7 @@ Each subcommand caters to a specific task, empowering you to customize your geno
 
 To follow this short tutorial on using the GRAMEP method, you'll need specific files relevant to your analysis. If you already have these files, you can use your local copies. However, if you don't have the required files or want to ensure you have the most up-to-date versions, we recommend downloading them from our official repository.
 
-Download the Tutorial Files: [Download Link](<<Insert Download Link>>)
+Download the Tutorial Files: [Download Link](https://github.com/omatheuspimenta/GRAMEP/raw/main/data/tutorial_data.tar.xz)
 
 Simply click on the download link provided above to access the necessary files. Once downloaded, you'll be ready to start the tutorial and explore the capabilities of GRAMEP for genomics analysis.
 

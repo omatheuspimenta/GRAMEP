@@ -12,6 +12,21 @@ maintainers = [
 readme = "README.md"
 license = "MIT"
 packages = [{include = "gramep"}]
+classifiers = [
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Natural Language :: English",
+    "Environment :: Console",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+]
+
+[tool.poetry.urls]
+"Code" = "https://github.com/omatheuspimenta/GRAMEP"
+"Bug Tracker" = "https://github.com/omatheuspimenta/GRAMEP/issues"
+"Documentation" = "https://gramep.readthedocs.io/en/latest/"
 
 [tool.poetry.scripts]
 gramep = "gramep.cli:app"
