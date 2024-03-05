@@ -52,6 +52,7 @@ message = Messages()
 Set the Message class for logging.
 """
 
+
 def run_exclusive_kmers(
     sequence: SeqRecord.SeqRecord,
     word: int,

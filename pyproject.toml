@@ -10,6 +10,7 @@ maintainers = [
     "Matheus Pimenta <matheus.pimenta@outlook.com>",
 ]
 readme = "README.md"
+license = "MIT"
 packages = [{include = "gramep"}]
 
 [tool.poetry.scripts]
