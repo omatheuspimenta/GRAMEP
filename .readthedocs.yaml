@@ -19,4 +19,4 @@ build:
       - poetry config virtualenvs.create false
 
     post_install:
-      - poetry install --only doc
+      - poetry install --with doc
