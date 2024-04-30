@@ -2,7 +2,8 @@
 # GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle
 
 [![Documentation Status](https://readthedocs.org/projects/gramep/badge/?version=latest)](https://gramep.readthedocs.io/en/latest/?badge=latest)
-
+[![codecov](https://codecov.io/gh/omatheuspimenta/GRAMEP/graph/badge.svg?token=U467OQ6A9L)](https://codecov.io/gh/omatheuspimenta/GRAMEP)
+[![CI](https://github.com/omatheuspimenta/GRAMEP/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/omatheuspimenta/GRAMEP/actions/workflows/pipeline.yaml)
 
 **GRAMEP** is a powerful, Python-based tool designed for the precise identification of Single Nucleotide Polymorphisms (SNPs) within biological sequences.  It goes beyond basic SNP identification, offering advanced functionalities including:
 
