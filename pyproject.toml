@@ -69,7 +69,7 @@ mkdocstrings-python = "^1.9.2"
 mkdocs-macros-plugin = "^1.0.5"
 jinja2 = "^3.1.3"
 termynal = "^0.12.1"
-mkdocs-material = "^9.5.20"
+mkdocs-material = "9.5.15"
 
 [build-system]
 requires = ["poetry-core"]
