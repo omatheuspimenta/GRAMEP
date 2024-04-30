@@ -64,12 +64,12 @@ blue = "^0.9.1"
 
 
 [tool.poetry.group.doc.dependencies]
-mkdocs-material = "^9.5.17"
 mkdocstrings = "^0.24.3"
 mkdocstrings-python = "^1.9.2"
 mkdocs-macros-plugin = "^1.0.5"
 jinja2 = "^3.1.3"
 termynal = "^0.12.1"
+mkdocs-material = "^9.5.20"
 
 [build-system]
 requires = ["poetry-core"]
