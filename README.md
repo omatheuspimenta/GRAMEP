@@ -1,4 +1,5 @@
-![logo](https://gramep.readthedocs.io/en/latest/assets/logo.png)
+<img src="https://gramep.readthedocs.io/en/latest/assets/logo.png" width="200">
+
 # GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle
 
 [![Documentation Status](https://readthedocs.org/projects/gramep/badge/?version=latest)](https://gramep.readthedocs.io/en/latest/?badge=latest)
