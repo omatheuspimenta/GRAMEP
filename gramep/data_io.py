@@ -145,12 +145,18 @@ def run_load_sequences(
         defaultdict[str, int]: A defaultdict mapping k-mers to their frequency counts.
     """
     alphabet = None
-    if dictonary == 'ACTG':
-        alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z'
-    elif dictonary == 'ACGU':
-        alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|T|V|W|X|Y|Z'
-    if not alphabet:
-        message.error_dict()
+    match dictonary:
+        case 'ACTG':
+            # if dictonary == 'ACTG':
+            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z'
+        case 'ACGU':
+            # elif dictonary == 'ACGU':
+            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|T|V|W|X|Y|Z'
+        case 'ALL':
+            alphabet = 'B|D|E|F|H|I|J|K|L|M|O|P|Q|R|S|V|W|X|Y|Z'
+        case _:
+            # if not alphabet:
+            message.error_dict()
 
     # seq_kmer = defaultdict(int)
     # if re.search(alphabet, sequence[0]) is not None:
@@ -634,12 +640,18 @@ def loads_sequence_classify(
 
     sequences_dict = dictonary
     alphabet = None
-    if sequences_dict == 'ACTG':
-        alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z'
-    elif sequences_dict == 'ACGU':
-        alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|T|V|W|X|Y|Z'
-    if not alphabet:
-        message.error_dict()
+    match sequences_dict:
+        case 'ACTG':
+            # if sequences_dict == 'ACTG':
+            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z'
+        case 'ACGU':
+            # elif sequences_dict == 'ACGU':
+            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|T|V|W|X|Y|Z'
+        case 'ALL':
+            alphabet = 'B|D|E|F|H|I|J|K|L|M|O|P|Q|R|S|V|W|X|Y|Z'
+        case _:
+            # if not alphabet:
+            message.error_dict()
 
     sample = defaultdict(int)
     if re.search(alphabet, str(seq[0])) is not None:
