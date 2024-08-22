@@ -321,8 +321,6 @@ def test_get_mutations_all_dict(caplog):
             REF_PATH,
             '--spath',
             SEQ_PATH + 'Alpha.fasta',
-            '--apath',
-            ANNOT_PATH,
             '--save-path',
             SAVE_PATH,
             '-w',
