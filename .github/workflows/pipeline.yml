@@ -16,15 +16,15 @@ jobs:
 
       - name: Poetry Install
         run: pip install poetry
-      
+
+      - name: Install project without documentation
+        run: poetry install --without doc
+
       - name: Maturin PyO3 action
         uses: PyO3/maturin-action@v1
         with:
           command: build
           args: --release
-
-      - name: Install project without documentation
-        run: poetry install --without doc
 
       - name: Run tests
         run: poetry run task test --cov-report=xml
