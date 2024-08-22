@@ -5,7 +5,6 @@ kmers_utils
 This module provides utility functions for working with k-mers.
 
 Contents:
-    * kmers_freq: Get the frequency of k-mers in a sequence.
     * select_kmers: Select k-mers from a dictionary based on a frequency threshold.
     * kmers_difference: Calculate the difference in k-mers between two defaultdicts.
     * kmers_intersections: Calculate the intersection in k-mers between two defaultdicts.
@@ -19,32 +18,6 @@ Todo:
     * Implement tests.
 """
 from collections import Counter, defaultdict
-
-
-def kmers_freq(sequence: str, word: int, step: int) -> defaultdict[str, int]:
-    """
-    Calculate the frequency of overlapping k-mers in a sequence.
-
-    This function takes a sequence string and calculates the frequency of overlapping
-    k-mers of the specified length and step size. It returns a defaultdict that maps
-    k-mers to their frequency counts.
-
-    Args:
-        sequence (str): The input sequence as a string.
-        word (int): The length of each k-mer.
-        step (int): The step size for moving the sliding window.
-
-    Returns:
-        defaultdict[str, int]: A defaultdict mapping k-mers to their frequency counts.
-    """
-
-    index = 0
-    kmers: defaultdict[str, int] = defaultdict(int)
-
-    while (index + word) < len(sequence):
-        kmers[str(''.join(sequence[index : index + word]))] += 1
-        index += step
-    return kmers
 
 
 def select_kmers(threshold: int, kmers: defaultdict) -> defaultdict[str, int]:

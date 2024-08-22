@@ -11,11 +11,10 @@ Contents:
 """
 from collections import defaultdict
 
-from matplotlib import patches as patches
-from matplotlib import pyplot as plt
-
 from gramep.helpers import get_colours, next_colour
 from gramep.messages import Messages
+from matplotlib import patches as patches
+from matplotlib import pyplot as plt
 
 message = Messages()
 """
@@ -26,7 +25,7 @@ Set the Message class for logging.
 def plot_graphic(
     variations: list,
     ref_sequence: str,
-    freq_kmers: defaultdict(int),
+    freq_kmers: defaultdict[int],
     sequence_name: str,
     save_path: str,
     colour_palette: str = 'classic',

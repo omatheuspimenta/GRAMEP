@@ -6,8 +6,6 @@ Contents:
     * reference_sequence: Read and retrieve the reference sequence from a FASTA file.
     * annotation_dataframe: Process annotation information from a GFF3 file into \
     a DataFrame and a sequence interval Series.
-    * run_load_sequences: Run the sequence loading and k-mer splitting process.
-    * buffer_sequences: Buffer a sequence and its name.
     * load_sequences: Load and select the most informative kmers from sequences \
     * save_exclusive_kmers: Save exclusive k-mers to a file.
     * save_intersection_kmers: Save intersection k-mers to a file.
@@ -16,7 +14,6 @@ Contents:
     * write_frequencies: Write k-mer frequencies to a file.
     * load_variants_exclusive: Load variants and exclusive k-mers from a folder.
     * load_variants_kmers: Load and return unique exclusive k-mers from saved files.
-    * loads_sequence_classify: Load the sequences based on variants and k-mers.
     * save_data: Save data to files in the specified directory.
     * save_ranges: Save MinMaxScaler object ranges to a file.
     * load_ranges: Load MinMaxScaler object ranges from a file.
@@ -32,7 +29,6 @@ Contents:
     * load_dataframe_phylo: Load the dataframe from sequences and mutations.
     * save_newick: Save the newick string to a file.
     
-
 Todo:
     * Implement tests.
 """
@@ -45,36 +41,27 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import polars as pl
-import regex as re
-from Bio import File, Seq, SeqIO, SeqRecord
+from Bio import Seq, SeqIO, SeqRecord
 from gffpandas import gffpandas as gffpd
+from gramep.entropy_utils import maxentropy
+from gramep.helpers import get_sequence_interval
+from gramep.kmers_utils import select_kmers
+from gramep.messages import Messages
+from gramep.utilrs import get_kmers
 from joblib import Parallel, delayed
 from joblib_progress import joblib_progress
 from matplotlib import pyplot as plt
 from rich.progress import (
     BarColumn,
-    MofNCompleteColumn,
     Progress,
     SpinnerColumn,
     TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
-    TimeRemainingColumn,
 )
 from seaborn import heatmap
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import MinMaxScaler
-
-from gramep.entropy_utils import maxentropy
-from gramep.helpers import (
-    batched,
-    count_freq,
-    dicts_sum,
-    get_sequence_interval,
-    split_sequence,
-)
-from gramep.kmers_utils import kmers_freq, select_kmers
-from gramep.messages import Messages
 
 message = Messages()
 """
@@ -91,6 +78,9 @@ def reference_sequence(seq_path: str) -> str:
 
     Returns:
         str: The uppercase sequence string from the FASTA record.
+
+    Todo:
+        * Implement in Rust.
     """
     with open(seq_path, encoding='utf8') as reference:
         for record in SeqIO.parse(reference, 'fasta'):
@@ -121,120 +111,11 @@ def annotation_dataframe(
     return df_annotation, seq_interval
 
 
-def run_load_sequences(
-    sequence: SeqRecord.SeqRecord,
-    word: int,
-    step: int,
-    dictonary: str = 'ACTG',
-) -> defaultdict[str, int]:
-    """
-    Run the sequence loading and k-mer splitting process.
-
-    This function takes a sequence string and performs the sequence loading and
-    k-mer splitting using the specified k-mer length and step size. It returns a
-    defaultdict that maps k-mers to their frequency counts.
-
-    Args:
-        sequence (SeqRecord.SeqRecord): A SeqRecord.SeqRecord containing the sequence.
-        word (int): The length of each k-mer.
-        step (int): The step size for moving the sliding window.
-        dictonary (str, optional): A string containing characters to consider \
-                                    in sequences. Default is 'ACTG' (DNA alphabet).
-
-    Returns:
-        defaultdict[str, int]: A defaultdict mapping k-mers to their frequency counts.
-    """
-    alphabet = None
-    match dictonary:
-        case 'ACTG':
-            # if dictonary == 'ACTG':
-            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z'
-        case 'ACGU':
-            # elif dictonary == 'ACGU':
-            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|T|V|W|X|Y|Z'
-        case 'ALL':
-            alphabet = 'B|D|E|F|H|I|J|K|L|M|O|P|Q|R|S|V|W|X|Y|Z'
-        case _:
-            # if not alphabet:
-            message.error_dict()
-
-    # seq_kmer = defaultdict(int)
-    # if re.search(alphabet, sequence[0]) is not None:
-    #     message.info_removed_seq(sequence[1])
-    # else:
-    #     for key, value in kmers_freq(sequence[0], word, step).items():
-    #         seq_kmer[key] += value
-    # return seq_kmer
-    removed_seq = 0
-    seq_kmer = defaultdict(int)
-    seq = str(sequence.seq).upper()
-    if re.search(alphabet, seq) is not None:
-        message.info_removed_seq(sequence.name)
-        removed_seq += 1
-    else:
-        for key, value in kmers_freq(seq, word, step).items():
-            seq_kmer[key] += value
-    if removed_seq > 0:
-        message.warning_removed_sequences(removed_seq)
-    return seq_kmer
-
-
-# def run_buffer_sequences(seq: SeqRecord.SeqRecord) -> tuple[str, str]:
-#     """
-#     Run buffer a sequence and its name.
-
-#     This function takes a sequence record object, extracts the sequence as a
-#     string in uppercase, and retrieves the sequence's name. It returns a tuple
-#     containing the buffered sequence and the sequence name.
-
-#     Args:
-#         seq (SeqRecord.SeqRecord): A sequence record object.
-
-#     Returns:
-#         tuple[str, str]: A tuple containing the buffered sequence (as a string in \
-#         uppercase)
-#         and the sequence name.
-#     """
-#     return (str(seq.seq).upper(), seq.name)
-
-
-def buffer_sequences(
-    sequence_path: str, reference: bool = False
-) -> File._IndexedSeqFileDict | dict[str, SeqRecord.SeqRecord]:
-    """
-    Buffer a sequence and its name.
-
-    This function takes a sequence record object, extracts the sequence as a
-    string in uppercase, and retrieves the sequence's name. It returns a tuple
-    containing the buffered sequence and the sequence name.
-
-    Args:
-        sequence_path (str): The path to the file containing sequences.
-        reference (bool, optional): If True, return the reference sequence. \
-                                    Default is False.
-    Returns:
-        File._IndexedSeqFileDict | dict[str, SeqRecord.SeqRecord]: A dictionary \
-                                                                   containing \
-                                                                   the sequences.
-    """
-    # with open(sequence_path, encoding='utf-8') as sequences:
-    #     with joblib_progress('Buffering the sequences ...'):
-    #         seq_records = Parallel(n_jobs=-2)(
-    #             delayed(run_buffer_sequences)(seq)
-    #             for seq in SeqIO.parse(sequences, 'fasta')
-    #         )
-
-    # return seq_records
-    if reference:
-        return SeqIO.to_dict(SeqIO.parse(sequence_path, 'fasta'))
-    return SeqIO.index(sequence_path, 'fasta')
-
-
 def load_sequences(
-    seq_records: File._IndexedSeqFileDict | dict[str, SeqRecord.SeqRecord],
+    file_path: str,
     word: int,
     step: int,
-    dictonary: str = 'ACTG',
+    dictonary: str = 'DNA',
     reference: bool = False,
     chunk_size: int = 100,
 ) -> defaultdict[str, int]:
@@ -248,13 +129,12 @@ def load_sequences(
     reference sequence as a single string.
 
     Args:
-        seq_records (File._IndexedSeqFileDict | dict[str, SeqRecord.SeqRecord]): \
-        A dictonary containing the sequences.
+        file_path (str): The path to the file containing sequences.
         word (int): The length of each k-mer.
         step (int): The step size for moving the sliding window.
         dictonary (str, optional): A string containing characters to consider \
-            in sequences. Default is 'ACTG' (DNA alphabet).
-        reference (bool, optional): If True, return the reference sequence.
+        in sequences. Default is 'DNA' (DNA alphabet).
+        reference (bool, optional): If True, return the reference sequence.\
         Default is False.
         chunk_size (int, optional): The chunk size for loading sequences. \
         Default is 100.
@@ -269,36 +149,17 @@ def load_sequences(
         TaskProgressColumn(),
         TextColumn('[progress.description]{task.description}'),
         BarColumn(),
-        MofNCompleteColumn(),
         TimeElapsedColumn(),
-        '<',
-        TimeRemainingColumn(),
     )
 
     if reference:
         loading_text = 'Loading reference sequence ...'
     else:
         loading_text = 'Loading sequences ...'
-    kmers = defaultdict(int)
-    seq_records_generator = (name for name in seq_records.keys())
+
     with progress:
-        task = progress.add_task(
-            f'[cyan]{loading_text}', total=len(seq_records)
-        )
-        for batch_seqs in batched(seq_records_generator, chunk_size):
-            k_mers_list = Parallel(n_jobs=-2)(
-                delayed(run_load_sequences)(
-                    seq_records[sequence_name], word, step, dictonary
-                )
-                for sequence_name in batch_seqs
-            )
-            # del seq_records
-            kmers_dict = dicts_sum(*k_mers_list)
-            del k_mers_list
-            for key, value in kmers_dict.items():
-                kmers[key] += value
-            del kmers_dict
-            progress.update(task, advance=len(batch_seqs))
+        progress.add_task(f'[cyan]{loading_text}', total=None)
+        kmers = get_kmers(file_path, word, step, dictonary, chunk_size)
 
     # Check if sequence is reference
     if reference:
@@ -309,7 +170,6 @@ def load_sequences(
     _, _, sequenceFrequency, _ = maxentropy(kmers)
 
     return select_kmers(sequenceFrequency, kmers)
-    # return select_kmers(0, kmers)
 
 
 def save_exclusive_kmers(
@@ -550,7 +410,7 @@ def load_variants_exclusive(
     return loads, variants_names
 
 
-def load_variants_kmers(save_path: str) -> np.ndarray:
+def load_variants_kmers(save_path: str) -> list[str]:
     """
     Load and return unique exclusive k-mers from saved files.
 
@@ -564,7 +424,7 @@ def load_variants_kmers(save_path: str) -> np.ndarray:
         saved exclusive k-mers files.
 
     Returns:
-        np.ndarray: A NumPy array containing the unique set of exclusive k-mers.
+        list: A list containing the unique set of exclusive k-mers.
     """
     subfolders = [f.path for f in scandir(save_path) if f.is_dir()]
     loads = []
@@ -576,98 +436,7 @@ def load_variants_kmers(save_path: str) -> np.ndarray:
             seq_kmers_exclusive = [''.join(item) for item in pickle.load(f)]
             loads.extend(seq_kmers_exclusive)
 
-    return np.unique(loads)
-
-
-# def load_intersection_kmers(
-#     save_path: str,
-# ) -> tuple[defaultdict[str, list[str]], list[str]]:
-#     """
-#     Load variants and intersection k-mers from a folder.
-
-#     This function reads and loads variants and intersection k-mers from the specified file.
-#     It returns a tuple containing a defaultdict of variant information and a \
-#     list of intersection k-mers.
-
-#     Args:
-#         save_path (str): The path to the file containing variants folders and \
-#         intersection k-mers.
-
-#     Returns:
-#         tuple[defaultdict[str, list[str]], list[str]]: A tuple containing a \
-#         defaultdict of variant information and a list of intersection k-mers.
-#     """
-#     subfolders = [f.path for f in scandir(save_path) if f.is_dir()]
-#     loads = defaultdict(list)
-#     variants_names = []
-#     for dirname in subfolders:
-#         with open(
-#             dirname
-#             + '/'
-#             + dirname.split(sep='/')[-1]
-#             + '_IntersectionKmers.sav',
-#             'rb',
-#         ) as f:
-#             loads[dirname.split(sep='/')[-1]] = pickle.load(f)
-#         variants_names.append(dirname.split(sep='/')[-1])
-#     return loads, variants_names
-
-
-def loads_sequence_classify(
-    seq: tuple[str, str, str],
-    dictonary: str,
-    word: int,
-    step: int,
-    variants_kmers: np.ndarray,
-    predict_data: bool = False,
-) -> defaultdict[str, int] | None:
-    """
-    Load the sequences based on variants and k-mers.
-
-    This function reads sequences from the specified file,
-    and returns a pandas default containing the kmers frequency.
-
-    Args:
-        seq (tuple[str, str, str]): A tuple containing the sequence.
-        dictonary (str): The DNA dictionary for k-mer analysis.
-        word (int): The length of each k-mer.
-        step (int): The step size for moving the sliding window.
-        variants_kmers (np.ndarray): An array of variant k-mers data.
-
-    Returns:
-        defaultdict: A defaultdict containing the features.
-    """
-
-    sequences_dict = dictonary
-    alphabet = None
-    match sequences_dict:
-        case 'ACTG':
-            # if sequences_dict == 'ACTG':
-            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z'
-        case 'ACGU':
-            # elif sequences_dict == 'ACGU':
-            alphabet = 'B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|T|V|W|X|Y|Z'
-        case 'ALL':
-            alphabet = 'B|D|E|F|H|I|J|K|L|M|O|P|Q|R|S|V|W|X|Y|Z'
-        case _:
-            # if not alphabet:
-            message.error_dict()
-
-    sample = defaultdict(int)
-    if re.search(alphabet, str(seq[0])) is not None:
-        message.info_removed_seq(seq[1])
-        return
-    else:
-        seq_split = count_freq(split_sequence(seq[0], word, step))
-
-        for item in variants_kmers:
-            sample[item] = seq_split[item]
-        if predict_data:
-            sample['ID'] = seq[1]
-        else:
-            sample['CLASS'] = seq[2]
-
-    return sample
+    return np.unique(loads).tolist()
 
 
 def save_data(
@@ -937,7 +706,7 @@ def load_exclusive_kmers_file(path_exclusive_kmers: str) -> list[str]:
             seq_kmers_exclusive = file_exclusive_kmers.read().splitlines()
         it = iter(seq_kmers_exclusive)
         the_len = len(next(it))
-        if not all(len(l) == the_len for l in it):
+        if not all(len(kmer_len) == the_len for kmer_len in it):
             return message.error_different_kmers_len
         else:
             return seq_kmers_exclusive
@@ -976,14 +745,14 @@ def load_mutations(save_path: str) -> npt.NDArray[np.str_]:
 def load_reports(save_path: str) -> list[str]:
     """
     Load and return the reports dirnames.
-    
+
     This function loads the reports directory and
     returns them as a list of strings.
-    
+
     Args:
         save_path (str): The path to the directory containing subfolders with \
         reports in _report.csv format.
-        
+
     Returns:
         list[str]: A list of strings containing the reports dirnames.
     """
@@ -1047,15 +816,15 @@ def load_seqs_phylogenic(
 def load_dataframe_phylo(save_path: str) -> pl.DataFrame:
     """
     Load the dataframe from sequences and mutations.
-    
+
     This function loads the sequences from the report in specified directory and
     returns them as a dataframe, where the columns are the mutations and the rows
     are the sequences.
-    
+
     Args:
         save_path (str): The path to the directory containing subfolders with \
         reports in _report.csv format.
-        
+
     Returns:
         pl.DataFrame: A dataframe containing the mutations in binary format.
     """

@@ -11,6 +11,7 @@ Contents:
 
 Todo:
     * Implement tests.
+    * Implement in Rust.
 """
 from collections import defaultdict
 

@@ -275,7 +275,7 @@ INFO     ✅🌲 Phylogenic tree saved in data/output/phylogenics/ folder
 INFO     Done! 💥🎉✨      
  <br></span></div>
 
-Two files are generated: one with a `.tree` extension containing the tree in Newick format and another with a `.pdf` extension, presenting a simple plotted representation of the tree. It's important to note that the `.pdf` file is just an illustrative example. Using the generated Newick file, you have the flexibility to style the tree with various layouts.
+One file`.tree` extension containing the tree in Newick format is generated. Using the generated Newick file, you have the flexibility to style the tree with various layouts.
 
 ### Training a Classification Model with `classify`
 

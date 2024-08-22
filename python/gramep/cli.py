@@ -1,7 +1,3 @@
-from rich.console import Console
-from typer import Context, Exit, Option, Typer
-from typing_extensions import Annotated
-
 from gramep import __version__
 from gramep.classify_utils import classify as _classify
 from gramep.classify_utils import predict as _predict
@@ -12,6 +8,9 @@ from gramep.mutations import (
     get_variants_intersection as _get_variants_intersection,
 )
 from gramep.phylogenics import get_phylogenic as _get_phylogenic
+from rich.console import Console
+from typer import Context, Exit, Option, Typer
+from typing_extensions import Annotated
 
 app = Typer(rich_markup_mode='rich')
 console = Console()
@@ -24,7 +23,7 @@ def show_version(flag):
 
 
 def complete_dicts():
-    return ['ACTG', 'ACUG']
+    return ['DNA', 'RNA', 'ALL']
 
 
 def complete_objective():
@@ -66,7 +65,9 @@ def get_mutations(
         str,
         Option('--save-path', help=':open_file_folder: Path to save results.'),
     ],
-    word: Annotated[int, Option('--word', '-w', help=':pencil: Word size.')],
+    word: Annotated[
+        int, Option('--word', '-w', help=':straight_ruler: Word size.')
+    ],
     step: Annotated[
         int, Option('--step', '-s', help=':next_track_button: Step size.')
     ],
@@ -86,9 +87,9 @@ def get_mutations(
             '--dictonary',
             '-d',
             help=':dna::book: DNA dictionary.',
-            autocompletion=complete_dicts,
+            shell_complete=complete_dicts,
         ),
-    ] = 'ACTG',
+    ] = 'DNA',
     create_report: Annotated[
         bool, Option('--create-report', help=':clipboard: Create report.')
     ] = False,
@@ -114,7 +115,7 @@ def get_mutations(
         int,
         Option(
             '--chunk-size',
-            help=':chains: Chunk size for loading sequences.',
+            help=':package: Chunk size for loading sequences.',
         ),
     ] = 100,
 ):
@@ -166,7 +167,9 @@ def get_intersection(
 
 @app.command()
 def classify(
-    word: Annotated[int, Option('--word', '-w', help=':pencil: Word size.')],
+    word: Annotated[
+        int, Option('--word', '-w', help=':straight_ruler: Word size.')
+    ],
     step: Annotated[
         int, Option('--step', '-s', help=':next_track_button: Step size.')
     ],
@@ -188,9 +191,9 @@ def classify(
             '--dictonary',
             '-d',
             help=':dna::book: DNA dictionary.',
-            autocompletion=complete_dicts,
+            shell_complete=complete_dicts,
         ),
-    ] = 'ACTG',
+    ] = 'DNA',
     should_save_data: Annotated[
         bool,
         Option(
@@ -202,16 +205,23 @@ def classify(
         bool,
         Option(
             '--should-save-model',
-            help=':floppy_disk: Save model used for classification.',
+            help=':floppy_disk::robot: Save model used for classification.',
         ),
     ] = True,
     should_save_confusion_matrix: Annotated[
         bool,
         Option(
             '--should-save-confusion-matrix',
-            help=':floppy_disk::red_square::blue_square: Save confusion matrix.',
+            help=':floppy_disk::abacus: Save confusion matrix.',
         ),
     ] = True,
+    chunk_size: Annotated[
+        int,
+        Option(
+            '--chunk-size',
+            help=':package: Chunk size for loading sequences.',
+        ),
+    ] = 100,
 ):
     """
     Classify variants.
@@ -225,12 +235,15 @@ def classify(
         should_save_data=should_save_data,
         should_save_model=should_save_model,
         should_save_confusion_matrix=should_save_confusion_matrix,
+        chunk_size=chunk_size,
     )
 
 
 @app.command()
 def predict(
-    word: Annotated[int, Option('--word', '-w', help=':pencil: Word size.')],
+    word: Annotated[
+        int, Option('--word', '-w', help=':straight_ruler: Word size.')
+    ],
     step: Annotated[
         int, Option('--step', '-s', help=':next_track_button: Step size.')
     ],
@@ -270,9 +283,16 @@ def predict(
         Option(
             '--load-model-path',
             '-lmpath',
-            help=':open_file_folder: Path to model file.',
+            help=':open_file_folder::robot: Path to model file.',
         ),
     ],
+    chunk_size: Annotated[
+        int,
+        Option(
+            '--chunk-size',
+            help=':package: Chunk size for loading sequences.',
+        ),
+    ] = 100,
 ):
     """
     Predict variants.
@@ -286,6 +306,7 @@ def predict(
         dictonary=dictonary,
         load_ranges_path=load_ranges_path,
         load_model_path=load_model_path,
+        chunk_size=chunk_size,
     )
 
 
@@ -296,8 +317,8 @@ def from_configfile(
         Option(
             '--objective',
             '-o',
-            help=':memo: Objective. Options: get-mutations, get-intersection, classify, predict.',
-            autocompletion=complete_objective,
+            help=':memo: Objective. Options: get-mutations, get-intersection, classify, predict or phylogenic.',
+            shell_complete=complete_objective,
         ),
     ],
     config_file: Annotated[
@@ -331,7 +352,7 @@ def grid_search(
         Option(
             '--min-word',
             '-minw',
-            help=':pencil::heavy_minus_sign: Min word size.',
+            help=':straight_ruler::heavy_minus_sign: Min word size.',
         ),
     ],
     max_word: Annotated[
@@ -339,7 +360,7 @@ def grid_search(
         Option(
             '--max-word',
             '-maxw',
-            help=':pencil::heavy_plus_sign: Max word size.',
+            help=':straight_ruler::heavy_plus_sign: Max word size.',
         ),
     ],
     min_step: Annotated[
@@ -364,9 +385,9 @@ def grid_search(
             '--dictonary',
             '-d',
             help=':dna::book: DNA dictionary.',
-            autocompletion=complete_dicts,
+            shell_complete=complete_dicts,
         ),
-    ] = 'ACTG',
+    ] = 'DNA',
 ):
     """
     Perform grid search to suggest a value for word and step size.
@@ -395,7 +416,7 @@ def phylogenetic(
         bool,
         Option(
             '--save-heatmap',
-            help=':floppy_disk::fire::world_map: Save heatmap of the distance matrix.',
+            help=':floppy_disk::thermometer::input_numbers: Save heatmap of the distance matrix.',
         ),
     ] = False,
 ):

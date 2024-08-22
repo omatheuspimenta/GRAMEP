@@ -90,6 +90,7 @@ def execute_configparser(objective: str, config_file: str):
             should_save_confusion_matrix = config_parser.getboolean(
                 'classify', 'should_save_confusion_matrix'
             )
+            chunk_size = config_parser.getint('classify', 'chunk_size')
 
             classify(
                 word=word,
@@ -100,6 +101,7 @@ def execute_configparser(objective: str, config_file: str):
                 should_save_data=should_save_data,
                 should_save_model=should_save_model,
                 should_save_confusion_matrix=should_save_confusion_matrix,
+                chunk_size=chunk_size,
             )
         case 'predict':
             word = config_parser.getint('predict', 'word')
@@ -116,6 +118,7 @@ def execute_configparser(objective: str, config_file: str):
             load_model_path = str(
                 config_parser.get('predict', 'load_model_path')
             )
+            chunk_size = config_parser.getint('predict', 'chunk_size')
 
             predict(
                 word=word,
@@ -126,6 +129,7 @@ def execute_configparser(objective: str, config_file: str):
                 dictonary=dictonary,
                 load_ranges_path=load_ranges_path,
                 load_model_path=load_model_path,
+                chunk_size=chunk_size,
             )
         case 'phylogenic':
             save_path = str(config_parser.get('phylogenic', 'save_path'))

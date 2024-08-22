@@ -1,9 +1,8 @@
 from shutil import rmtree
 
+from gramep.cli import app
 from pytest import fixture, mark
 from typer.testing import CliRunner
-
-from gramep.cli import app
 
 runner = CliRunner()
 
@@ -193,7 +192,7 @@ def test_get_mutations_complete(variant, caplog):
             '--snps-max',
             '1',
             '-d',
-            'ACTG',
+            'DNA',
             '--create-report',
             '--save-kmers',
         ],

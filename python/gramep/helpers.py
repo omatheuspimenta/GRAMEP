@@ -7,39 +7,24 @@ are not domain-specific and are meant to assist with
 common tasks that might be needed in various contexts.
 
 Contents:
-    * split_sequence: Split a sequence into overlapping k-mers.
     * get_sequence_interval: Create a closed interval using the 'start' and 'end' \
     values from a row of data.
-    * dicts_sum: Combine multiple dictionaries by summing their corresponding values.
-    * dicts_append: Combine and append values from multiple dictionaries \
-    into a defaultdict.
-    * dicts_drop_duplicates: Remove duplicate values from a dictionary's \
-    value lists and return a new defaultdict.
-    * check_diffs: Check differences between reference and variant k-mers.
-    * batched: Generate batches of items from an iterable.
     * make_report: Generate a report for variations and annotations in a sequence.
-    * get_kmers_frequencies: Get k-mer frequencies and positions from differences.
     * get_colours: Get a dictionary of colours based on the specified palette.
     * next_colour: Get the next colour from the predefined colour cycle.
-    * count_freq: Count the frequency of items in a sequence.
     * get_newick_list: Construct a Newick tree string from a SciPy hierarchical \
     clustering ClusterNode.
     * get_newick_str: Generate a Newick tree string from a SciPy hierarchical \
     clustering tree.
 
-
-
 Todo:
     * Implement tests.
 """
-from collections import defaultdict
-from itertools import cycle, islice
-from typing import Generator
+from itertools import cycle
 
 import pandas as pd
-from scipy.cluster.hierarchy import ClusterNode
-
 from gramep.messages import Messages
+from scipy.cluster.hierarchy import ClusterNode
 
 message = Messages()
 """
@@ -56,26 +41,6 @@ itertools.cycle: A cycle iterator that iterates through the COLOR_LIST repeatedl
 """
 
 
-def split_sequence(sequence: str, word: int, step: int) -> list[str]:
-    """
-    Split a sequence into overlapping k-mers of a specified length and step size.
-
-    Args:
-        sequence (str): The input sequence to be split.
-        word (int): The length of each k-mer.
-        step (int): The step size to move the sliding window.
-
-    Returns:
-        list[str]: A list of overlapping k-mers extracted from the sequence.
-    """
-    index = 0
-    kmers = []
-    while (index + word) < len(sequence):
-        kmers.append(str(''.join(sequence[index : index + word])))
-        index += step
-    return kmers
-
-
 def get_sequence_interval(row: pd.Series) -> pd.Interval:
     """
     Create a closed interval using the 'start' and 'end' values from a row of data.
@@ -90,136 +55,6 @@ def get_sequence_interval(row: pd.Series) -> pd.Interval:
         pd.Interval: A closed interval defined by the 'start' and 'end' values.
     """
     return pd.Interval(row.start, row.end, closed='both')
-
-
-def dicts_sum(*dicts: defaultdict[str, int]) -> defaultdict[str, int]:
-    """
-    Combine multiple dictionaries by summing their corresponding values.
-
-    This function takes a variable number of dictionaries and returns a new defaultdict
-    where the values corresponding to the same keys are summed across all \
-    input dictionaries.
-
-    Args:
-        *dicts (defaultdict[str, int]): Variable number of dictionaries to be combined.
-
-    Returns:
-        defaultdict[str, int]: A defaultdict containing the summed values for each key.
-    """
-    dict_sum = defaultdict(int)
-    for dictionary in dicts:
-        for key, value in dictionary.items():
-            dict_sum[key] += value
-    return dict_sum
-
-
-def dicts_append(
-    *dicts: defaultdict[str, list[str]]
-) -> defaultdict[str, list[str]]:
-    """
-    Combine and append values from multiple dictionaries into a defaultdict.
-
-    This function takes a variable number of dictionaries and creates a new defaultdict
-    that combines and appends values from the input dictionaries based on their keys.
-
-    Args:
-        *dicts: Variable number of dictionaries to be combined and appended.
-
-    Returns:
-        defaultdict[str, list[str]]: A defaultdict containing combined and \
-        appended values as lists for each key.
-    """
-    dict_append = defaultdict(list)
-    for dictionary in dicts:
-        for key, value in dictionary.items():
-            for i in value:
-                dict_append[key].append(i)
-    return dict_append
-
-
-def dicts_drop_duplicates(
-    dictionary: defaultdict[str, list[str]]
-) -> defaultdict[str, list[str]]:
-    """
-    Remove duplicate values from a dictionary's value lists and return \
-    a new defaultdict.
-
-    This function takes a dictionary and creates a new defaultdict \
-    where duplicate values in the original dictionary's value lists are removed.
-
-    Args:
-        dictionary(defaultdict[str, list[str]]): A dictionary containing keys and\
-            associated value lists.
-
-    Returns:
-        defaultdict[str, list[str]]: A defaultdict with duplicate-free value \
-        lists for each key.
-    """
-    dict_no_dup = defaultdict(list)
-    for key, value in dictionary.items():
-        dict_no_dup[key] = list(set(value))
-    return dict_no_dup
-
-
-def check_diffs(ref_kmers: str, var_kmers: str, ref_index: int) -> list[str]:
-    """
-    Check differences between reference and variant k-mers.
-
-    This function takes a reference k-mer string, a variant k-mer string,
-    and the index of the reference k-mer in the context of the data. It checks
-    for differences between the two k-mer strings and returns a list of strings
-    representing the differences found.
-
-    Args:
-        ref_kmers (str): The reference k-mer string.
-        var_kmers (str): The variant k-mer string.
-        ref_index (int): The index of the reference k-mer in the data.
-
-    Returns:
-        list[str]: A list of strings representing differences found.
-    """
-
-    return [
-        str(
-            str(int(ref_index) + index + 1)
-            + ':'
-            + str(ref_kmers[index] + char)
-            + ':'
-            + str(ref_kmers)
-            + ':'
-            + str(var_kmers)
-        )
-        for index, char in enumerate(var_kmers)
-        if not ref_kmers[index] == char
-    ]
-
-
-def batched(
-    iterable: Generator[list[tuple[str, str]], None, None], n: int
-) -> Generator[list[tuple[str, str]], None, None]:
-    """
-    Generate batches of items from an iterable.
-
-    This function takes an iterable of items, such as a generator, and yields batches
-    of items as lists of tuples. Each batch contains 'n' items from the input iterable.
-
-    Args:
-        iterable (Generator[list[tuple[str, str]], None, None]): An iterable of items
-            represented as lists of tuples.
-        n (int): The size of each batch.
-
-    Yields:
-        Generator[list[tuple[str, str]], None, None]: A generator that yields batches \
-        of items as lists of tuples.
-
-    Raises:
-        ValueError: If 'n' is less than one.
-    """
-    if n < 1:
-        raise ValueError('n must be at least one')
-    it = iter(iterable)
-    while batch := list(islice(it, n)):
-        yield batch
 
 
 def make_report(
@@ -355,46 +190,6 @@ def make_report(
     return list(set(report_list))
 
 
-def get_kmers_frequencies(
-    diffs_positions: defaultdict,
-) -> tuple[defaultdict[str, list[str]], list[str]]:
-    """
-    Get k-mer frequencies and positions from differences.
-
-    This function takes a defaultdict containing differences positions and \
-    returns a tuple containing a defaultdict of k-mer frequencies and a list of k-mers.
-
-    Args:
-        diffs_positions (defaultdict): A defaultdict mapping \
-        differences to their positions.
-
-    Returns:
-        tuple[defaultdict[str, list[str]], list[str]]: A tuple containing a \
-        defaultdict of k-mer frequencies and a list of k-mers.
-    """
-    freq_dict_temp = defaultdict(list)
-    freq_dict = defaultdict(int)
-    var_list = []
-
-    for key, value in diffs_positions.items():
-        snps = value
-        for snp in snps:
-            pos, var, _, _ = snp.split(':')
-            ref = var[0]
-            base = var[1]
-            freq_dict_temp[str(str(pos) + ':' + str(ref) + str(base))].append(
-                (key, str(str(ref) + str(base)))
-            )
-
-    freq_dict_temp = dicts_drop_duplicates(freq_dict_temp)
-
-    for key, value in freq_dict_temp.items():
-        freq_dict[key] = len(value)
-        var_list.append(key)
-    var_list = list(set(var_list))
-    return freq_dict, var_list
-
-
 def get_colours(colour_palette: str) -> dict[str, dict[str, str]]:
     """
     Get a dictionary of colours based on the specified palette.
@@ -474,26 +269,6 @@ def next_colour() -> str:
         str: The next colour from the colour cycle.
     """
     return next(COLOR_CYCLE)
-
-
-def count_freq(seq: list) -> defaultdict[str, int]:
-    """
-    Count the frequency of items in a sequence.
-
-    This function takes a sequence and returns a defaultdict containing \
-    the frequency count of each unique item in the sequence.
-
-    Args:
-        seq (list): The sequence of items to count frequencies for.
-
-    Returns:
-        defaultdict[str, int]: A defaultdict containing the frequency count of \
-        each unique item.
-    """
-    freq = defaultdict(int)
-    for item in seq:
-        freq[item] += 1
-    return freq
 
 
 def get_newick_list(

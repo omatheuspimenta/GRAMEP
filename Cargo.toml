@@ -1,0 +1,23 @@
+[package]
+name = "gramep"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+name = "utilrs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.22.2"
+rayon = "1.10"
+num_cpus = "1.16"
+rustc-hash = "2.0.0"
+bio = "2.0.1"
+regex = "1.10.6"
+concat-string = "1.0.1"
+
+[profile.release]
+lto = 'thin'
+opt-level = 3
+overflow-checks = false
+panic = 'abort'

@@ -16,7 +16,6 @@ Contents:
     * predict_data: Predict classes using a trained RandomForestClassifier model.
     * predict: Predict sequence classes using a trained model.
 
-
 Note:
     This module is designed to work with biological sequences and their classifications,
     allowing researchers to quickly classify and analyze sequence variants.
@@ -30,9 +29,27 @@ from os import listdir
 
 import numpy as np
 import pandas as pd
-from Bio import SeqIO
-from joblib import Parallel, delayed
-from joblib_progress import joblib_progress
+from gramep.data_io import (
+    load_model,
+    load_ranges,
+    load_variants_kmers,
+    save_confusion_matrix,
+    save_data,
+    save_metrics,
+    save_model,
+    save_predict_data,
+    save_ranges,
+)
+from gramep.messages import Messages
+from gramep.utilrs import load_sequences_classify
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
@@ -46,20 +63,6 @@ from sklearn.model_selection import (
 )
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
-from gramep.data_io import (
-    load_model,
-    load_ranges,
-    load_variants_kmers,
-    loads_sequence_classify,
-    save_confusion_matrix,
-    save_data,
-    save_metrics,
-    save_model,
-    save_predict_data,
-    save_ranges,
-)
-from gramep.messages import Messages
-
 message = Messages()
 """
 Set the Message class for logging.
@@ -67,7 +70,12 @@ Set the Message class for logging.
 
 
 def extract_features(
-    word: int, step: int, save_path: str, dir_path: str, dictonary: str
+    word: int,
+    step: int,
+    save_path: str,
+    dir_path: str,
+    dictonary: str,
+    chunk_size: int = 100,
 ) -> pd.DataFrame:
     """
     Extract features from sequences and save to a DataFrame.
@@ -84,12 +92,22 @@ def extract_features(
         save_path (str): The path to save the extracted features DataFrame.
         dir_path (str): The path to the directory containing sequence data.
         dictonary (str): The DNA dictionary for k-mer analysis.
+        chunk_size (int, optional): The chunk size for loading sequences. \
+        Default is 100.
 
     Returns:
         pd.DataFrame: A pandas DataFrame containing the extracted features.
     """
 
     message.info_start_objetive('Extracting the features ...')
+
+    progress = Progress(
+        SpinnerColumn(),
+        TaskProgressColumn(),
+        TextColumn('[progress.description]{task.description}'),
+        BarColumn(),
+        TimeElapsedColumn(),
+    )
 
     variants_kmers = load_variants_kmers(save_path=save_path)
 
@@ -98,26 +116,13 @@ def extract_features(
         for name in listdir(dir_path)
         if fnmatch(name, '*.fasta')
     ]
-    seq_list = []
-    for file in file_list:
-        with open(file, encoding='utf-8') as sequences:
-            seq_class = file.split('/')[-1].split('.fasta')[0]
-            seq_records = [
-                (str(seq.seq).upper(), seq.name, seq_class)
-                for seq in SeqIO.parse(sequences, 'fasta')
-            ]
-            seq_list.extend(seq_records)
-    del seq_records, seq_class
 
-    with joblib_progress('Loading sequences ...', total=len(seq_list)):
-        feat_list = Parallel(n_jobs=-2)(
-            delayed(loads_sequence_classify)(
-                seq, dictonary, word, step, variants_kmers
-            )
-            for seq in seq_list
+    with progress:
+        progress.add_task('[cyan]Loading sequences ...', total=None)
+        feat_list = load_sequences_classify(
+            file_list, word, step, dictonary, variants_kmers, False, chunk_size
         )
 
-    feat_list = list(filter(None, feat_list))
     data_frame = pd.DataFrame(feat_list)
 
     return data_frame
@@ -272,10 +277,11 @@ def classify(
     step: int,
     save_path: str,
     dir_path: str,
-    dictonary: str = 'ACGT',
+    dictonary: str = 'DNA',
     should_save_data: bool = True,
     should_save_model: bool = True,
     should_save_confusion_matrix: bool = True,
+    chunk_size: int = 100,
 ):
     """
     Perform sequence classification pipeline.
@@ -291,13 +297,15 @@ def classify(
         step (int): The step size for moving the sliding window.
         save_path (str): The path to save the processed data and model files.
         dir_path (str): The path to the directory containing sequence data.
-        dictonary (str): The DNA dictionary for k-mer analysis. Default is 'ACGT'.
+        dictonary (str): The DNA dictionary for k-mer analysis. Default is 'DNA'.
         should_save_data (bool, optional): Whether to save processed data. \
         Default is True.
         should_save_model (bool, optional): Whether to save the trained model. \
         Default is True.
         should_save_confusion_matrix (bool, optional): Whether to save the \
         confusion matrix plot. Default is True.
+        chunk_size (int, optional): The chunk size for loading sequences. \
+        Default is 100.
 
     Returns:
         Message class: A message confirming the classification pipeline has completed.
@@ -309,6 +317,7 @@ def classify(
         save_path=save_path,
         dir_path=dir_path,
         dictonary=dictonary,
+        chunk_size=chunk_size,
     )
 
     # Process the feature matrix, ie, do MinMax scaler
@@ -333,7 +342,8 @@ def extract_features_to_predict(
     step: int,
     save_path: str,
     predict_seq_path: str,
-    dictonary: str = 'ACGT',
+    dictonary: str = 'DNA',
+    chunk_size: int = 100,
 ) -> pd.DataFrame:
     """
     Extract features from sequences for prediction and return as a DataFrame.
@@ -350,7 +360,9 @@ def extract_features_to_predict(
         save_path (str): The path to save the extracted features for prediction.
         predict_seq_path (str): The path to the file containing sequences \
         for prediction.
-        dictonary (str): The DNA dictionary for k-mer analysis. Default is 'ACGT'.
+        dictonary (str): The DNA dictionary for k-mer analysis. Default is 'DNA'.
+        chunk_size (int, optional): The chunk size for loading sequences. \
+        Default is 100.
 
     Returns:
         pd.DataFrame: A pandas DataFrame containing the extracted features \
@@ -358,23 +370,29 @@ def extract_features_to_predict(
     """
 
     message.info_start_prediction()
-    with open(predict_seq_path, encoding='utf-8') as sequences:
-        seq_list = [
-            (str(seq.seq).upper(), seq.name, 'unknow')  # noqa: F821
-            for seq in SeqIO.parse(sequences, 'fasta')
-        ]
-    del sequences
+    progress = Progress(
+        SpinnerColumn(),
+        TaskProgressColumn(),
+        TextColumn('[progress.description]{task.description}'),
+        BarColumn(),
+        TimeElapsedColumn(),
+    )
+
     variants_kmers = load_variants_kmers(save_path=save_path)
 
-    with joblib_progress('Loading sequences ...', total=len(seq_list)):
-        features = Parallel(n_jobs=-2)(
-            delayed(loads_sequence_classify)(
-                seq, dictonary, word, step, variants_kmers, True
-            )
-            for seq in seq_list
+    with progress:
+        progress.add_task('[cyan]Loading sequences ...', total=None)
+
+        features = load_sequences_classify(
+            [predict_seq_path],
+            word,
+            step,
+            dictonary,
+            variants_kmers,
+            True,
+            chunk_size,
         )
 
-    features = list(filter(None, features))
     data_frame = pd.DataFrame(features)
     return data_frame
 
@@ -456,6 +474,7 @@ def predict(
     dictonary: str,
     load_ranges_path: str,
     load_model_path: str,
+    chunk_size: int = 100,
 ):
     """
     Predict sequence classes using a trained model.
@@ -477,13 +496,20 @@ def predict(
         dictonary (str): The DNA dictionary for k-mer analysis.
         load_ranges_path (str): The path to load the MinMaxScaler object ranges.
         load_model_path (str): The path to load the trained model.
+        chunk_size (int, optional): The chunk size for loading sequences. \
+        Default is 100.
 
     Returns:
         str: A message confirming the successful prediction and saving of results.
     """
 
     data_frame = extract_features_to_predict(
-        word, step, save_path, predict_seq_path, dictonary
+        word,
+        step,
+        save_path,
+        predict_seq_path,
+        dictonary,
+        chunk_size,
     )
 
     data_frame = process_dataframe_predict(

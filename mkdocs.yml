@@ -42,7 +42,7 @@ extra_css:
   - stylesheets/extra.css
 
 watch:
-  - gramep
+  - python/gramep
 
 plugins:
 - macros
@@ -50,6 +50,6 @@ plugins:
 - mkdocstrings:
     handlers:
       python:
-        paths: [gramep]
+        paths: [python/gramep]
 - search:
     lang: en

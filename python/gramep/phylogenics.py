@@ -16,11 +16,6 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-from scipy.cluster.hierarchy import ClusterNode, linkage, to_tree
-from sklearn.metrics import pairwise_distances
-from toyplot.pdf import render
-from toytree import tree
-
 from gramep.data_io import (
     load_dataframe_phylo,
     save_confusion_matrix,
@@ -28,6 +23,9 @@ from gramep.data_io import (
 )
 from gramep.helpers import get_newick_str
 from gramep.messages import Messages
+from scipy.cluster.hierarchy import ClusterNode, linkage, to_tree
+from sklearn.metrics import pairwise_distances
+from toytree import save, tree
 
 message = Messages()
 """
@@ -71,36 +69,36 @@ def get_distance_linkage(
     return dist, link_tree, variants_names
 
 
-def get_phylogenic_tree(newick_str: str, save_path: str):
-    """
-    Generate and save a phylogenetic tree visualization.
+# def get_phylogenic_tree(newick_str: str, save_path: str):
+#     """
+#     Generate and save a phylogenetic tree visualization.
 
-    This function takes a Newick tree string, converts it to an ultrametric tree,
-    and generates a phylogenetic tree visualization. The resulting visualization is saved as a PDF file.
+#     This function takes a Newick tree string, converts it to an ultrametric tree,
+#     and generates a phylogenetic tree visualization. The resulting visualization is saved as a PDF file.
 
-    Args:
-        newick_str (str): The Newick tree string representing the phylogenetic tree.
-        save_path (str): The directory path where the phylogenetic tree visualization will be saved.
+#     Args:
+#         newick_str (str): The Newick tree string representing the phylogenetic tree.
+#         save_path (str): The directory path where the phylogenetic tree visualization will be saved.
 
-    Returns:
-        Message class: A message confirming the analysis was completed.
+#     Returns:
+#         Message class: A message confirming the analysis was completed.
 
-    """
-    t = tree(newick_str)
-    canvas, _, _ = t.draw(
-        tip_labels_align=False,
-        tip_labels_style={'font-size': '3px', '-toyplot-anchor-shift': '5px'},
-        scalebar=True,
-        shrink=10,
-        node_sizes=1,
-    )
-    path_dir = str(Path(save_path).parent) + '/phylogenics/'
-    path = Path(path_dir)
-    path.mkdir(mode=0o777, parents=True, exist_ok=True)
+#     """
+#     t = tree(newick_str)
+#     canvas, _, _ = t.draw(
+#         tip_labels_align=False,
+#         tip_labels_style={'font-size': '3px', '-toyplot-anchor-shift': '5px'},
+#         scale_bar=True,
+#         shrink=10,
+#         node_sizes=1,
+#     )
+#     path_dir = str(Path(save_path).parent) + '/phylogenics/'
+#     path = Path(path_dir)
+#     path.mkdir(mode=0o777, parents=True, exist_ok=True)
 
-    render(canvas, path_dir + '/tree.pdf')
+#     save(canvas, path_dir + '/tree.html')
 
-    return message.info_phylogenic_tree_saved(path_dir)
+#     return message.info_phylogenic_tree_saved(path_dir)
 
 
 def get_phylogenic(save_path: str, save_heatmap: bool = False):
@@ -143,5 +141,5 @@ def get_phylogenic(save_path: str, save_heatmap: bool = False):
 
     newick_str = get_newick_str(linkage_tree, variants_names)
     save_newick(newick_str, save_path)
-    get_phylogenic_tree(newick_str, save_path)
+    # get_phylogenic_tree(newick_str, save_path)
     return message.info_done()

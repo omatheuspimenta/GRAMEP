@@ -6,12 +6,11 @@ word and step size.
 Contents:
     * grid_search: Perform grid search to suggest a value for word and step size.
 """
-from thefuzz import fuzz
-from thefuzz.process import dedupe
-
-from gramep.data_io import buffer_sequences, load_sequences
+from gramep.data_io import load_sequences
 from gramep.kmers_utils import kmers_difference
 from gramep.messages import Messages
+from thefuzz import fuzz
+from thefuzz.process import dedupe
 
 message = Messages()
 """
@@ -26,7 +25,8 @@ def grid_search(
     max_word: int,
     min_step: int,
     max_step: int,
-    dictonary: str = 'ACTG',
+    dictonary: str = 'DNA',
+    chunk_size: int = 100,
 ):
     """
     Perform grid search to suggest a value for word and step size.
@@ -38,13 +38,13 @@ def grid_search(
         max_word (int): Max word size.
         min_step (int): Min step size.
         max_step (int): Max step size.
-        dictonary (str, optional): DNA dictionary. Defaults to 'ACTG'.
+        dictonary (str, optional): DNA dictionary. Defaults to 'DNA'.
+        chunk_size (int, optional): The chunk size for loading sequences. \
+        Default is 100.
 
     Returns:
         Message class
     """
-    sequences = buffer_sequences(sequence_path=sequence_path)
-    reference = buffer_sequences(sequence_path=reference_path)
 
     selected_word = 0
     selected_step = 0
@@ -53,18 +53,20 @@ def grid_search(
         for step in range(min_step, max_step + 1):
             message.info_grid_running(word, step)
             seq_kmers = load_sequences(
-                seq_records=sequences,
+                file_path=sequence_path,
                 word=word,
                 step=step,
                 dictonary=dictonary,
                 reference=False,
+                chunk_size=chunk_size,
             )
             ref_kmers = load_sequences(
-                seq_records=reference,
+                file_path=reference_path,
                 word=word,
                 step=step,
                 dictonary=dictonary,
                 reference=True,
+                chunk_size=chunk_size,
             )
 
             result = len(
