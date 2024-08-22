@@ -1,22 +1,21 @@
-[tool.poetry]
-name = "gramep"
-version = "1.0.0"
-description = "GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle"
-authors = [
-    "Matheus Pimenta <matheus.pimenta@outlook.com>",
-    "Fabricio Lopes <fabricio@utfpr.edu.br>",
-    ]
-maintainers = [
-    "Matheus Pimenta <matheus.pimenta@outlook.com>",
-]
-readme = "README.md"
-license = "MIT"
-packages = [{include = "gramep", from = "python"}]
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "gramep"
-version = "1.0.0"
+version = "1.0.5"
 requires-python = ">=3.12"
+description = "GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle"
+authors = [
+    { name="Matheus Pimenta", email="matheus.pimenta@outlook.com"},
+    { name="Fabricio Lopes", email="fabricio@utfpr.edu.br"},
+    ]
+maintainers = [
+    { name="Matheus Pimenta", email="matheus.pimenta@outlook.com"},
+]
+readme = "README.md"
+license = {text = "MIT License"}
 classifiers = [
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -29,58 +28,58 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
+dependencies = [
+    "rich >=13.7.1",
+    "typer >=0.12.3",
+    "biopython >=1.83",
+    "pandas >=2.2.2",
+    "gffpandas >=1.2.0",
+    "joblib >=1.4.2",
+    "joblib-progress >=1.0.5",
+    "matplotlib >=3.9.0",
+    "upsetplot >=0.9.0",
+    "scikit-learn >=1.5.1",
+    "seaborn >=0.13.2",
+    "polars >=1.5.0",
+    "toytree >=3.0.5",
+    "thefuzz >=0.22.1",
+]
+
+
 [project.urls]
 "Code" = "https://github.com/omatheuspimenta/GRAMEP"
 "Bug Tracker" = "https://github.com/omatheuspimenta/GRAMEP/issues"
 "Documentation" = "https://gramep.readthedocs.io/en/latest/"
 
-[build-system]
-requires = ["maturin>=1.5,<2.0"]
-build-backend = "maturin"
-
 [tool.maturin]
-python-source = "python"
-module-name = "gramep.utilrs"
+module-name = "utilrs"
 features = ["pyo3/extension-module"]
 
-[tool.poetry.scripts]
+
+[project.scripts]
 gramep = "gramep.cli:app"
 
-[tool.poetry.dependencies]
-python = "^3.12"
-rich = "^13.7.1"
-typer = "^0.12.3"
-biopython = "^1.83"
-pandas = "^2.2.2"
-gffpandas = "^1.2.0"
-joblib = "^1.4.2"
-joblib-progress = "^1.0.5"
-matplotlib = "^3.9.0"
-upsetplot = "^0.9.0"
-scikit-learn = "^1.5.1"
-seaborn = "^0.13.2"
-polars = "^1.5.0"
-toytree = "^3.0.5"
-thefuzz = "^0.22.1"
+[project.optional-dependencies]
+dev = [
+    "maturin >=1.5.1",
+    "pytest >=8.3.2",
+    "pytest-cov >=5.0.0",
+    "taskipy >=1.13.0",
+    "isort >=5.13.2",
+    "blue >=0.9.1",
+    ]
 
-[tool.poetry.group.dev.dependencies]
-maturin = "^1.5.1"
-pytest = "^8.3.2"
-pytest-cov = "^5.0.0"
-taskipy = "^1.13.0"
-isort = "^5.13.2"
-blue = "^0.9.1"
-
-[tool.poetry.group.doc.dependencies]
-mkdocstrings = "^0.25.2"
-mkdocstrings-python = "^1.10.8"
-mkdocs-macros-plugin = "^1.0.5"
-jinja2 = "^3.1.4"
-termynal = "^0.12.1"
-mkdocs-material = "^9.5.32"
+doc = [
+    "mkdocstrings >=0.25.2",
+    "mkdocstrings-python >=1.10.8",
+    "mkdocs-macros-plugin >=1.0.5",
+    "jinja2 >=3.1.4",
+    "termynal >=0.12.1",
+    "mkdocs-material >=9.5.32",
+    ]
 
 [tool.pytest.ini_options]
-pythonpath = "python"
+pythonpath = "python/"
 addopts = "--doctest-modules"
 
 [tool.isort]
@@ -88,11 +87,10 @@ profile = "black"
 line_length = 79
 
 [tool.taskipy.tasks]
-codeck = "blue --check --diff . && isort --check --diff ."
-codecg = "blue . && isort ."
+codeck = "blue --check --diff python/ && isort --check --diff python/"
+codecg = "blue python/ && isort python/"
 docs = "mkdocs serve"
-lintck = "ruff check ."
-lintcg = "ruff check --fix ."
 pre_test = "task codeck"
 test = "pytest -s -x --cov=gramep -vv"
 post_test = "coverage html"
+
