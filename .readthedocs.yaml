@@ -12,8 +12,10 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
+    rust: "1.55"
 
   jobs:
     post_create_environment:
       - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH pip install -e .[doc]
+      
       
