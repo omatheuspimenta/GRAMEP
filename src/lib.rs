@@ -378,8 +378,8 @@ fn get_freq_kmers(diffs: FxHashMap<String, Vec<String>>) -> Py<PyAny> {
     }
 
     for (key, value) in freq_dict.iter() {
-        freqs.insert(&key, value.len());
-        var_list.insert(&key);
+        freqs.insert(key, value.len());
+        var_list.insert(key);
     }
 
     return Python::with_gil(|py| (freqs, var_list).to_object(py));
