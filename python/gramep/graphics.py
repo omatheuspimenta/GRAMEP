@@ -282,4 +282,4 @@ def plot_graphic(
 
     plt.close()
 
-    return message.info_graphic_saved(save_path)
+    return message.info_graphic_saved(str(save_path + '/' + seq_name))
