@@ -98,7 +98,7 @@ fn get_alphabet(dict: &str) -> String {
     } else {
         "B|D|E|F|H|I|J|K|L|M|O|P|Q|R|S|V|W|X|Y|Z"
     });
-    return alphabet;
+    alphabet
 }
 
 /// Splits a sequence into overlapping substrings (k-mers) with a given step size.
@@ -149,7 +149,7 @@ fn split_seq(seq: &str, k: usize, step: usize) -> Vec<String> {
         kmers.push(seq[index..index + k].to_owned());
         index += step;
     }
-    return kmers;
+    kmers
 }
 
 /// Finds the positions and types of mutations (single nucleotide polymorphisms) between a pattern and a reference sequence.
@@ -224,7 +224,7 @@ fn get_kmer_mutation_index(
         }
         i += 1;
     }
-    return mutations;
+    mutations
 }
 
 /// Processes a FASTA file to count k-mer frequencies and returns a vector of frequency maps.
@@ -350,7 +350,7 @@ fn count_freq(
 
     let samples = rx.iter().collect::<Vec<FxHashMap<String, Value>>>();
 
-    return samples;
+    samples
 }
 
 #[pyfunction]
@@ -640,7 +640,7 @@ fn load_sequences_classify(
     predict_data: bool,
     batch_size: usize,
 ) -> Py<PyAny> {
-    let batch_size = batch_size.div_ceil(seqs_path.len()) as usize;
+    let batch_size = batch_size.div_ceil(seqs_path.len());
 
     let samples: Vec<FxHashMap<String, Value>> = seqs_path
         .into_par_iter()

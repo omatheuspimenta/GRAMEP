@@ -52,7 +52,8 @@ dependencies = [
 "Documentation" = "https://gramep.readthedocs.io/en/latest/"
 
 [tool.maturin]
-module-name = "utilrs"
+python-source = "python"
+module-name = "gramep.utilrs"
 features = ["pyo3/extension-module"]
 
 
