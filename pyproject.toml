@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "gramep"
-version = "1.0.5"
+version = "1.0.6"
 requires-python = ">=3.12"
 description = "GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle"
 authors = [

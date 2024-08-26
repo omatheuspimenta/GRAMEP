@@ -3,7 +3,6 @@
 This module provides functions for loading and saving data.
 
 Contents:
-    * reference_sequence: Read and retrieve the reference sequence from a FASTA file.
     * annotation_dataframe: Process annotation information from a GFF3 file into \
     a DataFrame and a sequence interval Series.
     * load_sequences: Load and select the most informative kmers from sequences \
@@ -41,13 +40,12 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import polars as pl
-from Bio import Seq, SeqIO, SeqRecord
 from gffpandas import gffpandas as gffpd
 from gramep.entropy_utils import maxentropy
 from gramep.helpers import get_sequence_interval
 from gramep.kmers_utils import select_kmers
 from gramep.messages import Messages
-from gramep.utilrs import get_kmers
+from gramep.utilrs import get_kmers, write_ref
 from joblib import Parallel, delayed
 from joblib_progress import joblib_progress
 from matplotlib import pyplot as plt
@@ -67,24 +65,6 @@ message = Messages()
 """
 Set the Message class for logging.
 """
-
-
-def reference_sequence(seq_path: str) -> str:
-    """
-    Read and retrieve the reference sequence from a FASTA file.
-
-    Args:
-        seq_path (str): Path to the FASTA file containing the reference sequence.
-
-    Returns:
-        str: The uppercase sequence string from the FASTA record.
-
-    Todo:
-        * Implement in Rust.
-    """
-    with open(seq_path, encoding='utf8') as reference:
-        for record in SeqIO.parse(reference, 'fasta'):
-            return str(record.seq).upper()
 
 
 def annotation_dataframe(
@@ -241,7 +221,7 @@ def save_intersection_kmers(
 
 def save_diffs_positions(
     sequence_path: str,
-    ref_sequence: str,
+    ref_path: str,
     variations: list[str],
     save_path: str,
 ):
@@ -255,7 +235,7 @@ def save_diffs_positions(
 
     Args:
         sequence_path (str): The path to the sequence data file.
-        ref_sequence (str): The reference sequence.
+        ref_path (str): The reference sequence.
         variations (list[str]): A list of variations.
         save_path (str): The path to save the variations and their positions.
 
@@ -263,7 +243,7 @@ def save_diffs_positions(
         Message class
     """
     seq_name = sequence_path.split('/')[-1].split('.')[0]
-    ref_sequence = list(ref_sequence)
+
     # Check if path exists
     dirPath = save_path + '/' + seq_name
     path = Path(dirPath)
@@ -288,15 +268,13 @@ def save_diffs_positions(
                     + '\n'
                 )
             )
-            ref_sequence[int(position)] = mutation[1]
+
     save_file_name = dirPath + '/' + seq_name + '_reference.fasta'
-    reference = SeqRecord.SeqRecord(
-        Seq.Seq(''.join(ref_sequence)),
-        id=seq_name + '_reference',
-        description='',
-        name=seq_name + '_reference',
+
+    write_ref(
+        ref_path=ref_path, variations=variations, save_path=save_file_name
     )
-    SeqIO.write(reference, save_file_name, 'fasta')
+
     return message.info_kmers_saved(dirPath)
 
 

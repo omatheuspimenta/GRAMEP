@@ -7,6 +7,7 @@
 extern crate concat_string;
 use bio::alignment::distance::simd::*;
 use bio::io::fasta;
+use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use regex::Regex;
@@ -353,6 +354,157 @@ fn count_freq(
     samples
 }
 
+/// Computes the intersection of k-mer sets.
+///
+/// This function takes a subset of k-mer variants and a mapping from k-mer
+/// identifiers to sets of k-mers. It finds the common k-mers across all
+/// sets specified by the subset.
+///
+/// # Arguments
+///
+/// * `subset` - A vector of k-mer variant identifiers. Each identifier is used
+///   to look up a set of k-mers in `variants_exclusive_kmers`.
+/// * `variants_exclusive_kmers` - A map where the key is a k-mer variant
+///   identifier and the value is a vector of k-mers associated with that variant.
+///
+/// # Returns
+///
+/// A vector of k-mers that are present in all sets corresponding to the
+/// identifiers in `subset`.
+///
+/// # Examples
+///
+/// ```
+/// use rustc_hash::FxHashMap;
+/// use utilrs::get_set_intersection;
+///
+/// let mut variants_exclusive_kmers: FxHashMap<String, Vec<String>> = FxHashMap::default();
+/// variants_exclusive_kmers.insert("A".to_string(), vec!["ACGT".to_string(), "ACGG".to_string()]);
+/// variants_exclusive_kmers.insert("B".to_string(), vec!["ACGT".to_string(), "ACGA".to_string()]);
+/// variants_exclusive_kmers.insert("C".to_string(), vec!["ACGT".to_string(), "ACGC".to_string()]);
+///
+/// let subset = vec!["A".to_string(), "B".to_string()];
+/// let intersection = get_set_intersection(subset, variants_exclusive_kmers);
+/// assert_eq!(intersection, vec!["ACGT".to_string()]);
+/// ```
+///
+fn get_set_intersection(
+    subset: Vec<String>,
+    variants_exclusive_kmers: FxHashMap<String, Vec<String>>,
+) -> Vec<String> {
+    let mut select_kmers: Vec<&Vec<String>> = Vec::new();
+
+    for variant in subset {
+        if let Some(kmers) = variants_exclusive_kmers.get(&variant) {
+            select_kmers.push(kmers);
+        }
+    }
+
+    if select_kmers.is_empty() {
+        return Vec::new();
+    }
+
+    let mut result: HashSet<&String> = select_kmers[0].iter().collect();
+
+    for temp_var in select_kmers.iter().skip(1) {
+        let unique: HashSet<&String> = temp_var.into_iter().collect();
+
+        result = result.intersection(&unique).cloned().collect();
+    }
+    result.into_iter().cloned().collect()
+}
+
+#[pyfunction]
+fn variants_intersection(
+    variants_exclusive_kmers: FxHashMap<String, Vec<String>>,
+    variants_names: Vec<String>,
+    intersection_seletion: String,
+) -> Py<PyAny> {
+    let mut intersection_kmers: FxHashMap<String, Vec<String>> = FxHashMap::default();
+    let mut intersection_kmers_sets: FxHashMap<String, Vec<String>> = FxHashMap::default();
+
+    if intersection_seletion == "ALL" {
+        for r in 1..variants_names.len() + 1 {
+            for subset in variants_names.clone().into_iter().combinations(r) {
+                if subset.len() > 1 {
+                    // println!("{:?}", subset);
+                    let intersection_set =
+                        get_set_intersection(subset.clone(), variants_exclusive_kmers.clone());
+                    // println!("{:?}", intersection_set);
+                    if intersection_set.len() > 0 {
+                        for variant in &subset {
+                            intersection_kmers_sets
+                                .insert(variant.clone(), intersection_set.clone());
+                        }
+                        intersection_kmers.insert(subset.join("-"), intersection_set);
+                        // println!("intersection_kmers: {:?}", intersection_kmers);
+                    }
+                }
+            }
+        }
+    } else {
+        let intersection_selects = intersection_seletion
+            .split("-")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        let intersection_set = get_set_intersection(
+            intersection_selects.clone(),
+            variants_exclusive_kmers.clone(),
+        );
+        if intersection_set.len() > 0 {
+            for variant in &intersection_selects {
+                intersection_kmers_sets.insert(variant.clone(), intersection_set.clone());
+            }
+            intersection_kmers.insert(intersection_seletion, intersection_set);
+            // println!("intersection_kmers: {:?}", intersection_kmers);
+        }
+    }
+
+    return Python::with_gil(|py| (intersection_kmers, intersection_kmers_sets).to_object(py));
+}
+
+#[pyfunction]
+fn write_ref(ref_path: String, variations: Vec<String>, save_path: String) -> () {
+    if variations.is_empty() {
+        return;
+    }
+    let reader = fasta::Reader::from_file(ref_path).unwrap();
+
+    for result in reader.records() {
+        let result_data = result.unwrap();
+        let seq: &[u8] = result_data.seq();
+        let seq_name = concat_string!(result_data.id().to_string(), String::from("_reference"));
+        let seq_str = String::from_utf8(seq.to_owned()).unwrap();
+        let mut seq_str = seq_str.to_uppercase();
+
+        for variation in &variations {
+            let variation = variation.split(":").collect::<Vec<&str>>();
+            let position = variation[0].parse::<usize>().unwrap();
+            let snp = variation[1].to_string();
+            seq_str.replace_range(
+                position..position + 1,
+                &snp.chars().nth(1).unwrap().to_string(),
+            );
+        }
+
+        let mut writer = fasta::Writer::to_file(save_path.clone()).unwrap();
+        let record = fasta::Record::with_attrs(&seq_name, None, seq_str.as_bytes());
+        let _ = writer.write_record(&record);
+    }
+
+    return;
+}
+
+#[pyfunction]
+fn ref_length(ref_path: String) -> Option<usize> {
+    let reader = fasta::Reader::from_file(ref_path).unwrap();
+    for result in reader.records() {
+        let seq_data = result.unwrap();
+        return Some(seq_data.seq().len());
+    }
+    return None;
+}
+
 #[pyfunction]
 fn get_freq_kmers(diffs: FxHashMap<String, Vec<String>>) -> Py<PyAny> {
     let mut freq_dict: FxHashMap<String, HashSet<(&str, String)>> = FxHashMap::default();
@@ -381,6 +533,8 @@ fn get_freq_kmers(diffs: FxHashMap<String, Vec<String>>) -> Py<PyAny> {
         freqs.insert(key, value.len());
         var_list.insert(key);
     }
+
+    let var_list = Vec::from_iter(var_list);
 
     return Python::with_gil(|py| (freqs, var_list).to_object(py));
 }
@@ -667,5 +821,8 @@ fn utilrs(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(kmers_analysis, m)?)?;
     m.add_function(wrap_pyfunction!(get_freq_kmers, m)?)?;
     m.add_function(wrap_pyfunction!(load_sequences_classify, m)?)?;
+    m.add_function(wrap_pyfunction!(write_ref, m)?)?;
+    m.add_function(wrap_pyfunction!(ref_length, m)?)?;
+    m.add_function(wrap_pyfunction!(variants_intersection, m)?)?;
     Ok(())
 }

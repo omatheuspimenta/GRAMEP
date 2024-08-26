@@ -18,7 +18,6 @@ from gramep.data_io import (
     annotation_dataframe,
     load_exclusive_kmers_file,
     load_sequences,
-    reference_sequence,
     save_diffs_positions,
     save_exclusive_kmers,
     save_intersection_kmers,
@@ -150,15 +149,11 @@ def get_mutations(
         chunk_size=chunk_size,
     )
 
-    # Load reference sequence
-    # Todo: Load in lazy mode the reference sequence
-    ref_sequence = reference_sequence(seq_path=reference_path)
-
     if diffs_positions is None:
         variations = []
         save_diffs_positions(
             sequence_path=sequence_path,
-            ref_sequence=ref_sequence,
+            ref_path=reference_path,
             variations=variations,
             save_path=save_path,
         )
@@ -173,7 +168,7 @@ def get_mutations(
     if save_kmers:
         save_diffs_positions(
             sequence_path=sequence_path,
-            ref_sequence=ref_sequence,
+            ref_path=reference_path,
             variations=variations,
             save_path=save_path,
         )
@@ -189,7 +184,7 @@ def get_mutations(
 
     plot_graphic(
         variations=variations,
-        ref_sequence=ref_sequence,
+        reference_path=reference_path,
         freq_kmers=freq_kmers,
         sequence_name=sequence_path,
         save_path=save_path,

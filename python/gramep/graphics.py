@@ -13,6 +13,7 @@ from collections import defaultdict
 
 from gramep.helpers import get_colours, next_colour
 from gramep.messages import Messages
+from gramep.utilrs import ref_length
 from matplotlib import patches as patches
 from matplotlib import pyplot as plt
 
@@ -23,8 +24,8 @@ Set the Message class for logging.
 
 
 def plot_graphic(
-    variations: list,
-    ref_sequence: str,
+    variations: list[str],
+    reference_path: str,
     freq_kmers: defaultdict[int],
     sequence_name: str,
     save_path: str,
@@ -53,7 +54,7 @@ def plot_graphic(
     y_level = 0
     snp_dict = defaultdict(list)
     ref_vars = {}
-    length = len(ref_sequence)
+    length = ref_length(reference_path)
     colour_dict = get_colours(colour_palette)
 
     for var in variations:

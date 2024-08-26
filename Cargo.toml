@@ -1,6 +1,6 @@
 [package]
 name = "gramep"
-version = "1.0.0"
+version = "1.0.6"
 edition = "2021"
 
 [lib]
@@ -15,6 +15,7 @@ rustc-hash = "2.0.0"
 bio = "2.0.1"
 regex = "1.10.6"
 concat-string = "1.0.1"
+itertools = "0.13.0"
 
 [profile.release]
 lto = 'thin'

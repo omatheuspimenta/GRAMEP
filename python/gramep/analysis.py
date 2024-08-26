@@ -13,14 +13,13 @@ Todo:
     * Implement tests.
 """
 from collections import defaultdict
-from itertools import combinations
 
 import numpy as np
 import pandas as pd
 from gramep.data_io import load_variants_exclusive
 from gramep.helpers import make_report
 from gramep.messages import Messages
-from gramep.utilrs import kmers_analysis
+from gramep.utilrs import kmers_analysis, variants_intersection
 from joblib import Parallel, delayed
 from joblib_progress import joblib_progress
 from matplotlib import pyplot as plt
@@ -145,48 +144,14 @@ def variants_analysis(
     Returns:
         defaultdict[str, list[str]]: A defaultdict containing analysis results.
     
-    Todo:
-        * Implement Rust version.
     """
     variants_exclusive_kmers, variants_names = load_variants_exclusive(
         save_path
     )
-    intersection_kmers = defaultdict(str)
-    intersection_kmers_sets = defaultdict(str)
 
-    if intersection_seletion == 'ALL':
-        for r in range(len(variants_names) + 1):
-            for subset in combinations(variants_names, r):
-                if len(subset) > 1:
-                    intersection_selects = list(subset)
-                    intersection_set = list(
-                        set.intersection(
-                            *(
-                                set(variants_exclusive_kmers[k])
-                                for k in intersection_selects
-                            )
-                        )
-                    )
-                    if len(intersection_set) > 0:
-                        intersection_kmers[
-                            '-'.join(intersection_selects)
-                        ] = intersection_set
-                        for variant in intersection_selects:
-                            intersection_kmers_sets[variant] = intersection_set
-    else:
-        intersection_selects = intersection_seletion.split(sep='-')
-        intersection_kmers[intersection_seletion] = list(
-            set.intersection(
-                *(
-                    set(variants_exclusive_kmers[k])
-                    for k in intersection_selects
-                )
-            )
-        )
-        for variant in intersection_selects:
-            intersection_kmers_sets[variant] = intersection_kmers[
-                intersection_seletion
-            ]
+    intersection_kmers, intersection_kmers_sets = variants_intersection(
+        variants_exclusive_kmers, variants_names, intersection_seletion
+    )
 
     with open(save_path + '/intersections.txt', 'a') as export_file:
         export_file.write('INTERSECTIONS\n')
