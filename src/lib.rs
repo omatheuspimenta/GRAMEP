@@ -427,17 +427,14 @@ fn variants_intersection(
         for r in 1..variants_names.len() + 1 {
             for subset in variants_names.clone().into_iter().combinations(r) {
                 if subset.len() > 1 {
-                    // println!("{:?}", subset);
                     let intersection_set =
                         get_set_intersection(subset.clone(), variants_exclusive_kmers.clone());
-                    // println!("{:?}", intersection_set);
                     if intersection_set.len() > 0 {
                         for variant in &subset {
                             intersection_kmers_sets
                                 .insert(variant.clone(), intersection_set.clone());
                         }
                         intersection_kmers.insert(subset.join("-"), intersection_set);
-                        // println!("intersection_kmers: {:?}", intersection_kmers);
                     }
                 }
             }
@@ -456,7 +453,6 @@ fn variants_intersection(
                 intersection_kmers_sets.insert(variant.clone(), intersection_set.clone());
             }
             intersection_kmers.insert(intersection_seletion, intersection_set);
-            // println!("intersection_kmers: {:?}", intersection_kmers);
         }
     }
 
