@@ -92,7 +92,10 @@ def mutations_analysis(
         return None, None
 
     with progress:
-        progress.add_task('[cyan]Getting SNPs positions ...', total=None)
+        progress.add_task(
+            '[cyan]Please, wait a moment. Getting SNPs positions...',
+            total=None,
+        )
 
         diffs_positions = kmers_analysis(
             seq_path=seq_path,

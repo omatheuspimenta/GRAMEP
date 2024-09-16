@@ -20,27 +20,6 @@ Todo:
 from collections import Counter, defaultdict
 
 
-def select_kmers(threshold: int, kmers: defaultdict) -> defaultdict[str, int]:
-    """
-    Select k-mers from a dictionary based on a frequency threshold.
-
-    This function takes a dictionary of k-mers and their frequency counts, and returns
-    a new dictionary containing only those k-mers whose frequency exceeds the specified
-    threshold.
-
-    Args:
-        threshold (int): The frequency threshold for selecting k-mers.
-        kmers (defaultdict[str, int]): A dictionary mapping k-mers to their\
-        frequency counts.
-
-    Returns:
-        defaultdict[str, int]: A dictionary containing selected k-mers \
-        and their frequencies.
-    """
-
-    return defaultdict(int, {k: 1 for k, v in kmers.items() if v > threshold})
-
-
 def kmers_difference(
     seq_kmers: defaultdict, ref_kmers: defaultdict
 ) -> list[str]:

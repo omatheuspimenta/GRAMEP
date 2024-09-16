@@ -11,8 +11,6 @@ Contents:
 Todo:
     * Implement tests.
 """
-from pathlib import Path
-
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -25,7 +23,6 @@ from gramep.helpers import get_newick_str
 from gramep.messages import Messages
 from scipy.cluster.hierarchy import ClusterNode, linkage, to_tree
 from sklearn.metrics import pairwise_distances
-from toytree import save, tree
 
 message = Messages()
 """

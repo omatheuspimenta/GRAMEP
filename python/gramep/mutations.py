@@ -182,6 +182,10 @@ def get_mutations(
         freq_kmers=freq_kmers, sequence_path=sequence_path, save_path=save_path
     )
 
+    if len(variations) > 100:
+        message.warning_no_plot()
+        return message.info_done()
+
     plot_graphic(
         variations=variations,
         reference_path=reference_path,

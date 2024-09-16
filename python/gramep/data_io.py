@@ -41,9 +41,7 @@ import numpy.typing as npt
 import pandas as pd
 import polars as pl
 from gffpandas import gffpandas as gffpd
-from gramep.entropy_utils import maxentropy
 from gramep.helpers import get_sequence_interval
-from gramep.kmers_utils import select_kmers
 from gramep.messages import Messages
 from gramep.utilrs import get_kmers, write_ref
 from joblib import Parallel, delayed
@@ -98,7 +96,7 @@ def load_sequences(
     dictonary: str = 'DNA',
     reference: bool = False,
     chunk_size: int = 100,
-) -> defaultdict[str, int]:
+) -> dict[str, int]:
     """
     Load and select the most informative kmers from sequences from a file into \
     overlapping k-mers.
@@ -120,7 +118,7 @@ def load_sequences(
         Default is 100.
 
     Returns:
-        defaultdict[str, int]: A defaultdict mapping most informative k-mers.
+        dict[str, int]: A defaultdict mapping most informative k-mers.
     """
     message.info_start()
 
@@ -139,17 +137,11 @@ def load_sequences(
 
     with progress:
         progress.add_task(f'[cyan]{loading_text}', total=None)
-        kmers = get_kmers(file_path, word, step, dictonary, chunk_size)
+        kmers = get_kmers(
+            file_path, word, step, dictonary, reference, chunk_size
+        )
 
-    # Check if sequence is reference
-    if reference:
-        return select_kmers(0, kmers)
-
-    # Entropy
-    message.info_entropy()
-    _, _, sequenceFrequency, _ = maxentropy(kmers)
-
-    return select_kmers(sequenceFrequency, kmers)
+    return kmers
 
 
 def save_exclusive_kmers(

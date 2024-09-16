@@ -390,3 +390,8 @@ class Messages:
 
     def warning_removed_sequences(self, string):
         log_text.warning(':warning: Removed %s sequences.', string)
+
+    def warning_no_plot(self):
+        log_text.warning(
+            ':warning: Large number of mutations. Unable to plot graph.'
+        )

@@ -16,7 +16,7 @@
 GRAMEP is accessible through a robust and intuitive Command-Line Interface (CLI). The primary command is `gramep`, with sub-commands for each action the application can perform.
 
 
-For detailed information, access the documentation.
+For detailed information, access the [documentation](https://gramep.readthedocs.io/).
 
 ## How to install
 

@@ -259,7 +259,6 @@ fn count_freq(
     predict_data: bool,
     batch_size: usize,
 ) -> Vec<FxHashMap<String, Value>> {
-    let num_threads: usize = num_cpus::get() - 1;
 
     let class_name = seq_path.split(".fasta").collect::<Vec<&str>>()[0];
     let class_name = class_name.split("/").collect::<Vec<&str>>();
@@ -267,7 +266,6 @@ fn count_freq(
 
     let reader = fasta::Reader::from_file(seq_path).unwrap();
     let pool: rayon::ThreadPool = rayon::ThreadPoolBuilder::new()
-        .num_threads(num_threads)
         .build()
         .unwrap();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -414,6 +412,164 @@ fn get_set_intersection(
     result.into_iter().cloned().collect()
 }
 
+/// Computes the Shannon entropy
+///
+/// This function calculates the Shannon entropy of a probability distribution.
+///
+/// # Arguments
+///
+/// * `probs` - A slice of probabilities.
+///
+/// # Returns
+///
+/// The Shannon entropy of the probability distribution.
+///
+/// # Examples
+///
+/// ```
+/// use utilrs::entropy;
+///
+/// let probs = vec![0.25, 0.25, 0.25, 0.25];
+/// let entropy = entropy(&probs);
+/// assert_eq!(entropy, 2.0);
+/// ```
+///
+fn entropy(probs: &[f64]) -> f64 {
+    probs
+        .iter()
+        .filter(|&&p| p > 0.0) // Ignore zero probabilities
+        .map(|&p| -p * p.log2())
+        .sum()
+}
+
+/// Computes the maximum entropy threshold for a set of k-mers.
+///
+/// This function calculates the maximum entropy threshold for a set of k-mers.
+/// The threshold is the frequency at which the entropy of the k-mer distribution
+/// is maximized.
+///
+/// # Arguments
+///
+/// * `kmers` - A map where the key is a k-mer and the value is the frequency of that k-mer.
+///
+/// # Returns
+///
+/// The maximum entropy threshold.
+///
+/// # Examples
+///
+/// ```
+/// use rustc_hash::FxHashMap;
+/// use utilrs::max_entropy;
+///
+/// let mut kmers: FxHashMap<String, u32> = FxHashMap::default();
+/// kmers.insert("ACGT".to_string(), 10);
+/// kmers.insert("ACGA".to_string(), 5);
+/// kmers.insert("ACGC".to_string(), 3);
+/// kmers.insert("ACGG".to_string(), 2);
+///
+/// let threshold = max_entropy(&kmers);
+/// assert_eq!(threshold, 5);
+/// ```
+///
+fn max_entropy(kmers: &FxHashMap<String, u32>) -> u32 {
+    let mut data: Vec<u32> = kmers.values().cloned().collect();
+    let total: u32 = data.iter().sum();
+
+    data.sort_by(|a, b| b.cmp(a));
+
+    let normalized_data: Vec<f64> = data.iter().map(|&x| x as f64 / total as f64).collect();
+
+    let entropy_curve: Vec<f64> = (1..normalized_data.len())
+        .into_par_iter()
+        .map(|s| {
+            // Region A: probs[:s], total probability P_A
+            let p_a: f64 = normalized_data[..s].iter().sum();
+            let h_a = if p_a > 0.0 {
+                let p_a_data: Vec<f64> = normalized_data[..s]
+                    .iter()
+                    .map(|&x| x as f64 / p_a as f64)
+                    .collect();
+                entropy(&p_a_data)
+            } else {
+                0.0
+            };
+            // Region B: probs[s:], total probability P_B
+            let p_b: f64 = normalized_data[s..].iter().sum();
+            let h_b = if p_b > 0.0 {
+                let p_b_data: Vec<f64> = normalized_data[s..]
+                    .iter()
+                    .map(|&x| x as f64 / p_b as f64)
+                    .collect();
+                entropy(&p_b_data)
+            } else {
+                0.0
+            };
+            h_a + h_b
+        })
+        .collect();
+
+    let (_max_entropy, max_entropy_idx) =
+        entropy_curve
+            .iter()
+            .enumerate()
+            .fold((f64::MIN, 0), |(max_val, max_idx), (idx, &val)| {
+                if val > max_val {
+                    (val, idx)
+                } else {
+                    (max_val, max_idx)
+                }
+            });
+
+    let threshold = max_entropy_idx;
+    let frequency = data[threshold];
+
+    frequency
+}
+
+/// Selects k-mers with frequencies above a given threshold.
+///
+/// This function filters a map of k-mers by selecting only those with frequencies
+/// above a specified threshold.
+///
+/// # Arguments
+///
+/// * `kmers` - A map where the key is a k-mer and the value is the frequency of that k-mer.
+/// * `threshold` - The minimum frequency threshold for selecting k-mers.
+///
+/// # Returns
+///
+/// A map containing only the k-mers with frequencies above the threshold.
+///
+/// # Examples
+///
+/// ```
+/// use rustc_hash::FxHashMap;
+/// use utilrs::select_kmers;
+///
+/// let mut kmers: FxHashMap<String, u32> = FxHashMap::default();
+/// kmers.insert("ACGT".to_string(), 10);
+/// kmers.insert("ACGA".to_string(), 5);
+/// kmers.insert("ACGC".to_string(), 3);
+/// kmers.insert("ACGG".to_string(), 2);
+///
+/// let threshold = 5;
+/// let selected_kmers = select_kmers(kmers, threshold);
+/// assert_eq!(selected_kmers.len(), 2);
+/// assert_eq!(selected_kmers.get("ACGT"), Some(&1));
+/// assert_eq!(selected_kmers.get("ACGA"), Some(&1));
+/// ```
+///
+fn select_kmers(kmers: FxHashMap<String, u32>, threshold: u32) -> FxHashMap<String, u32> {
+    let mut selected_kmers: FxHashMap<String, u32> = FxHashMap::default();
+    for (key, value) in kmers.iter() {
+        if value >= &threshold {
+            selected_kmers.insert(key.clone(), 1);
+        }
+    }
+    selected_kmers
+}
+
 #[pyfunction]
 fn variants_intersection(
     variants_exclusive_kmers: FxHashMap<String, Vec<String>>,
@@ -545,8 +701,6 @@ fn kmers_analysis(
     max_dist: usize,
     batch_size: usize,
 ) -> Py<PyAny> {
-    let num_threads: usize = num_cpus::get() - 1;
-
     // Load reference sequence
     let reader = fasta::Reader::from_file(seq_path).unwrap();
     let ref_reader = fasta::Reader::from_file(ref_path)
@@ -561,7 +715,6 @@ fn kmers_analysis(
     let ref_end = ref_seq_str.chars().count() - k + step;
 
     let pool: rayon::ThreadPool = rayon::ThreadPoolBuilder::new()
-        .num_threads(num_threads)
         .build()
         .unwrap();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -705,12 +858,11 @@ fn get_kmers(
     k: usize,
     step: usize,
     dict: String,
+    reference: bool,
     batch_size: usize,
 ) -> Py<PyAny> {
-    let num_threads: usize = num_cpus::get() - 1;
     let reader = fasta::Reader::from_file(seq_path).unwrap();
     let pool: rayon::ThreadPool = rayon::ThreadPoolBuilder::new()
-        .num_threads(num_threads)
         .build()
         .unwrap();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -777,7 +929,15 @@ fn get_kmers(
         }
     }
 
-    return Python::with_gil(|py| hm.to_object(py));
+    if reference {
+        let selected_kmers = select_kmers(hm, 0);
+        return Python::with_gil(|py| selected_kmers.to_object(py));
+    }
+
+    let threshold = max_entropy(&hm);
+    let selected_kmers = select_kmers(hm, threshold);
+
+    return Python::with_gil(|py| selected_kmers.to_object(py));
 }
 
 #[pyfunction]
