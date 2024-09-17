@@ -208,6 +208,13 @@ class Messages:
             ':mag_right: Getting information about exclusive kmers...'
         )
 
+    def info_wait(self):
+        """Messages.
+
+        Please wait
+        """
+        log_text.info(':hourglass: Please, wait a moment.')
+
     def info_done(self):
         """Messages.
 

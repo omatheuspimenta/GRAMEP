@@ -16,6 +16,7 @@ bio = "2.0.1"
 regex = "1.10.6"
 concat-string = "1.0.1"
 itertools = "0.13.0"
+spinners = "4.1.1"
 
 [profile.release]
 lto = 'thin'

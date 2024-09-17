@@ -135,6 +135,7 @@ def get_mutations(
 
     # Analize kmers
     message.info_get_kmers()
+    message.info_wait()
 
     diffs_positions, report = mutations_analysis(
         seq_path=sequence_path,

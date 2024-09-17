@@ -93,10 +93,9 @@ def mutations_analysis(
 
     with progress:
         progress.add_task(
-            '[cyan]Please, wait a moment. Getting SNPs positions...',
+            '[cyan] Getting SNPs positions...',
             total=None,
         )
-
         diffs_positions = kmers_analysis(
             seq_path=seq_path,
             ref_path=ref_path,
@@ -107,6 +106,7 @@ def mutations_analysis(
             batch_size=chunk_size,
         )
 
+    # print('diffs_positions', diffs_positions)
     if create_report:
         with joblib_progress(
             'Creating report ...', total=len(diffs_positions)
