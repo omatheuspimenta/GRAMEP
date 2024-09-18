@@ -106,7 +106,6 @@ def mutations_analysis(
             batch_size=chunk_size,
         )
 
-    # print('diffs_positions', diffs_positions)
     if create_report:
         with joblib_progress(
             'Creating report ...', total=len(diffs_positions)

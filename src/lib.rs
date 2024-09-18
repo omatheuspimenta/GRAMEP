@@ -5,6 +5,7 @@
 #![allow(unused_imports)]
 #[macro_use(concat_string)]
 extern crate concat_string;
+use anyhow::{Error, Result};
 use bio::alignment::distance::simd::*;
 use bio::io::fasta;
 use itertools::Itertools;
@@ -15,7 +16,6 @@ use rustc_hash::FxHashMap;
 use spinners::{Spinner, Spinners};
 use std::collections::HashSet;
 use std::sync::Arc;
-use anyhow::{Result, Error};
 
 enum Value {
     Usize(u32),
@@ -722,7 +722,9 @@ fn get_kmers_impl(
             for seq in batch {
                 let end = seq.len() - k + 1;
                 for index in (0..end).step_by(step) {
-                    *batch_hm.entry(seq[index..index + k].to_string()).or_insert(0) += 1;
+                    *batch_hm
+                        .entry(seq[index..index + k].to_string())
+                        .or_insert(0) += 1;
                 }
             }
             batch_hm
@@ -953,7 +955,9 @@ fn get_kmers(
     let result = get_kmers_impl(seq_path, k, step, dict, reference, batch_size);
     match result {
         Ok(selected_kmers) => Python::with_gil(|py| Ok(selected_kmers.to_object(py))),
-        Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())),
+        Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+            e.to_string(),
+        )),
     }
 }
 
