@@ -182,6 +182,13 @@ class Messages:
         Algorithm start
         """
         log_text.info(':checkered_flag: Starting %s', string)
+        
+    def info_founded_exclusive_kmers(self, string):
+        """Messages.
+
+        Founded exclusive kmers
+        """
+        log_text.info(':mag: Found %s exclusive kmers', string)
 
     def info_kmers_load(self):
         """Messages.

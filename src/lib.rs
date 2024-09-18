@@ -15,6 +15,7 @@ use rustc_hash::FxHashMap;
 use spinners::{Spinner, Spinners};
 use std::collections::HashSet;
 use std::sync::Arc;
+use anyhow::{Result, Error};
 
 enum Value {
     Usize(u32),
@@ -656,6 +657,96 @@ fn process_sequence(
         .collect()
 }
 
+/// Get the kmers from a sequence file
+///
+/// This function reads a FASTA file, processes sequences in batches, and counts the occurrences of k-mers of a specified length (`k`).
+/// It uses multi-threading to handle large files efficiently. The result is a vector of `FxHashMap`s, where each map contains k-mer counts
+/// and additional information based on the provided arguments.
+///
+/// # Arguments
+///
+/// * `seq_path` - The path to the FASTA file containing the sequences to process.
+/// * `k` - The length of k-mers to count.
+/// * `step` - The step size for extracting overlapping k-mers.
+/// * `dict` - A string specifying the dictionary type ('DNA', 'RNA', or 'ALL') used to determine forbidden characters.
+/// * `reference` - A boolean indicating if the reference is the input
+/// * `batch_size` - The number of sequences to process per batch.
+///
+/// # Returns
+///
+/// A `FxHashMap<String, u32>` where each `FxHashMap` contains:
+/// - k-mer frequencies.
+///
+///
+/// Example
+/// ```
+/// use utilrs::get_kmers;
+/// let seq_path = "path/to/sequences.fasta";
+/// let k = 4;
+/// let step = 1;
+/// let dict = "DNA";
+/// let reference = false;
+/// let batch_size = 100;
+/// let kmers = get_kmers(seq_path, k, step, dict, reference, batch_size);
+/// ```
+///
+fn get_kmers_impl(
+    seq_path: String,
+    k: usize,
+    step: usize,
+    dict: String,
+    reference: bool,
+    batch_size: usize,
+) -> Result<FxHashMap<String, u32>> {
+    let _sp = Spinner::new(Spinners::GrowVertical, String::new());
+    let reader = fasta::Reader::from_file(seq_path)?;
+    let dict = Arc::new(dict);
+
+    let sequences: Vec<_> = reader
+        .records()
+        .filter_map(|result| {
+            let record = result.ok()?;
+            let seq = String::from_utf8(record.seq().to_owned()).ok()?;
+            if !contains_forbidden_chars(&seq, &dict) {
+                Some(seq)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let hm: FxHashMap<String, u32> = sequences
+        .par_chunks(batch_size)
+        .map(|batch| {
+            let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
+            for seq in batch {
+                let end = seq.len() - k + 1;
+                for index in (0..end).step_by(step) {
+                    *batch_hm.entry(seq[index..index + k].to_string()).or_insert(0) += 1;
+                }
+            }
+            batch_hm
+        })
+        .reduce(
+            || FxHashMap::default(),
+            |mut acc, other| {
+                for (key, value) in other {
+                    *acc.entry(key).or_insert(0) += value;
+                }
+                acc
+            },
+        );
+
+    let selected_kmers = if reference {
+        select_kmers(hm, 0)
+    } else {
+        let threshold = max_entropy(&hm);
+        select_kmers(hm, threshold)
+    };
+
+    Ok(selected_kmers)
+}
+
 #[pyfunction]
 fn variants_intersection(
     variants_exclusive_kmers: FxHashMap<String, Vec<String>>,
@@ -858,82 +949,12 @@ fn get_kmers(
     dict: String,
     reference: bool,
     batch_size: usize,
-) -> Py<PyAny> {
-    let reader = fasta::Reader::from_file(seq_path).unwrap();
-    let pool: rayon::ThreadPool = rayon::ThreadPoolBuilder::new().build().unwrap();
-    let (tx, rx) = std::sync::mpsc::channel();
-
-    // Process sequences in batches
-    let mut batch = Vec::new();
-    for result in reader.records() {
-        let result_data = result.unwrap();
-        let seq: &[u8] = result_data.seq();
-        let seq_str = String::from_utf8(seq.to_owned()).unwrap();
-        if !contains_forbidden_chars(&seq_str, &dict) {
-            batch.push(seq_str);
-            if batch.len() >= batch_size {
-                let tx = tx.clone();
-                let batch_clone = batch.clone();
-                batch.clear();
-                pool.spawn(move || {
-                    let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
-                    for seq in batch_clone {
-                        let mut hm: FxHashMap<String, u32> = FxHashMap::default();
-                        let end = seq.chars().count() - k + step;
-                        let mut index = 0;
-                        while index + step < end {
-                            *hm.entry(seq[index..index + k].to_owned()).or_insert(0) += 1;
-                            index += step;
-                        }
-                        for (key, value) in hm.into_iter() {
-                            *batch_hm.entry(key).or_insert(0) += value;
-                        }
-                    }
-                    tx.send(batch_hm).unwrap();
-                });
-            }
-        }
+) -> PyResult<Py<PyAny>> {
+    let result = get_kmers_impl(seq_path, k, step, dict, reference, batch_size);
+    match result {
+        Ok(selected_kmers) => Python::with_gil(|py| Ok(selected_kmers.to_object(py))),
+        Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())),
     }
-    // Process any remaining sequences in the last batch
-    if !batch.is_empty() {
-        let tx = tx.clone();
-        pool.spawn(move || {
-            let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
-            for seq in batch {
-                let mut hm: FxHashMap<String, u32> = FxHashMap::default();
-                let end = seq.chars().count() - k + step;
-                let mut index = 0;
-                while index + step < end {
-                    *hm.entry(seq[index..index + k].to_owned()).or_insert(0) += 1;
-                    index += step;
-                }
-                for (key, value) in hm.into_iter() {
-                    *batch_hm.entry(key).or_insert(0) += value;
-                }
-            }
-            tx.send(batch_hm).unwrap();
-        });
-    }
-
-    drop(tx); // Close all senders
-
-    // Merge HashMaps incrementally
-    let mut hm: FxHashMap<String, u32> = FxHashMap::default();
-    for received_hm in rx {
-        for (key, value) in received_hm.into_iter() {
-            *hm.entry(key).or_insert(0) += value;
-        }
-    }
-
-    if reference {
-        let selected_kmers = select_kmers(hm, 0);
-        return Python::with_gil(|py| selected_kmers.to_object(py));
-    }
-
-    let threshold = max_entropy(&hm);
-    let selected_kmers = select_kmers(hm, threshold);
-
-    return Python::with_gil(|py| selected_kmers.to_object(py));
 }
 
 #[pyfunction]

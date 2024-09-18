@@ -134,6 +134,7 @@ def get_mutations(
             )
 
     # Analize kmers
+    message.info_founded_exclusive_kmers(len(seq_kmers_exclusive))
     message.info_get_kmers()
     message.info_wait()
 
