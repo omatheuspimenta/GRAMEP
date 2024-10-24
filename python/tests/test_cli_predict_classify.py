@@ -3,6 +3,7 @@ from pytest import mark
 from typer.testing import CliRunner
 
 runner = CliRunner()
+REF_PATH = 'data/reference/SARS-CoV2_wuhan_refseq.fasta'
 SAVE_PATH = 'data/output/mutations/'
 DIR_PATH = 'data/VOCs/'
 
@@ -21,7 +22,7 @@ def test_cli_classify(caplog):
             '--dir-path',
             DIR_PATH,
             '--dictonary',
-            'ACTG',
+            'DNA',
         ],
     )
     assert result.exit_code == 0
@@ -53,11 +54,35 @@ def test_cli_predict(variant, caplog):
             '-dpath',
             'data/output/classify/',
             '-d',
-            'ACTG',
+            'DNA',
             '-lrpath',
             'data/output/classify/' + 'model/ranges.sav',
             '-lmpath',
             'data/output/classify/' + 'model/model.sav',
+        ],
+    )
+    assert result.exit_code == 0
+    assert 'Done!' in caplog.text
+
+
+def test_classify_get_kmers(caplog):
+    result = runner.invoke(
+        app,
+        [
+            'classify',
+            '-w',
+            '10',
+            '-s',
+            '1',
+            '--save-path',
+            SAVE_PATH,
+            '--dir-path',
+            DIR_PATH,
+            '--should-get-kmers',
+            '--reference-path',
+            REF_PATH,
+            '--dictonary',
+            'DNA',
         ],
     )
     assert result.exit_code == 0

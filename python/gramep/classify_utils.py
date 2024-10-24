@@ -41,7 +41,10 @@ from gramep.data_io import (
     save_ranges,
 )
 from gramep.messages import Messages
+from gramep.mutations import get_only_kmers
 from gramep.utilrs import load_sequences_classify
+from joblib import Parallel, delayed
+from joblib_progress import joblib_progress
 from rich.progress import (
     BarColumn,
     Progress,
@@ -75,6 +78,7 @@ def extract_features(
     save_path: str,
     dir_path: str,
     dictonary: str,
+    variants_kmers: None = None,
     chunk_size: int = 100,
 ) -> pd.DataFrame:
     """
@@ -92,6 +96,7 @@ def extract_features(
         save_path (str): The path to save the extracted features DataFrame.
         dir_path (str): The path to the directory containing sequence data.
         dictonary (str): The DNA dictionary for k-mer analysis.
+        variants_kmers (None, optional): The exclusive k-mers. Default is None.
         chunk_size (int, optional): The chunk size for loading sequences. \
         Default is 100.
 
@@ -109,7 +114,8 @@ def extract_features(
         TimeElapsedColumn(),
     )
 
-    variants_kmers = load_variants_kmers(save_path=save_path)
+    if variants_kmers is None:
+        variants_kmers = load_variants_kmers(save_path=save_path)
 
     file_list = [
         dir_path + '/' + name
@@ -277,6 +283,8 @@ def classify(
     step: int,
     save_path: str,
     dir_path: str,
+    should_get_kmers: bool = False,
+    reference_path: str | None = None,
     dictonary: str = 'DNA',
     should_save_data: bool = True,
     should_save_model: bool = True,
@@ -297,6 +305,10 @@ def classify(
         step (int): The step size for moving the sliding window.
         save_path (str): The path to save the processed data and model files.
         dir_path (str): The path to the directory containing sequence data.
+        should_get_kmers (bool, optional): Whether to extract exclusive k-mers. \
+        Default is False.
+        reference_path (str, optional): The path to the reference sequence data file. \
+        Default is None.
         dictonary (str): The DNA dictionary for k-mer analysis. Default is 'DNA'.
         should_save_data (bool, optional): Whether to save processed data. \
         Default is True.
@@ -310,6 +322,30 @@ def classify(
     Returns:
         Message class: A message confirming the classification pipeline has completed.
     """
+    exclusive_kmers = None
+    if should_get_kmers:
+        file_list = [
+            dir_path + '/' + name
+            for name in listdir(dir_path)
+            if fnmatch(name, '*.fasta')
+        ]
+        with joblib_progress(
+            'Extracting exclusive k-mers ...', total=len(file_list)
+        ):
+            exclusive_kmers = Parallel(n_jobs=-2)(
+                delayed(get_only_kmers)(
+                    reference_path=reference_path,
+                    sequence_path=file,
+                    word=word,
+                    step=step,
+                    dictonary=dictonary,
+                    save_kmers=False,
+                    chunk_size=chunk_size,
+                )
+                for file in file_list
+            )
+
+        exclusive_kmers = np.unique(np.concatenate(exclusive_kmers))
 
     data_frame = extract_features(
         word=word,
@@ -317,6 +353,7 @@ def classify(
         save_path=save_path,
         dir_path=dir_path,
         dictonary=dictonary,
+        variants_kmers=exclusive_kmers,
         chunk_size=chunk_size,
     )
 

@@ -198,6 +198,69 @@ def get_mutations(
     return message.info_done()
 
 
+def get_only_kmers(
+    reference_path: str,
+    sequence_path: str,
+    word: int,
+    step: int,
+    dictonary: str = 'DNA',
+    save_kmers: bool = False,
+    save_path: str | None = None,
+    chunk_size: int = 100,
+) -> list[str]:
+    """
+    Extract only exclusive k-mers from sequences.
+    
+    This function extracts only exclusive k-mers from the provided sequence data.\
+    It calculates exclusive k-mers based on the input parameters.
+    
+    Args:
+        reference_path (str): The path to the reference sequence data file.
+        sequence_path (str): The path to the sequence data file.
+        word (int): The length of each k-mer.
+        step (int): The step size for moving the sliding window.
+        dictonary (str, optional): The DNA dictionary for k-mer analysis. \
+        Default is 'DNA'.
+        save_kmers (bool, optional): Whether to save k-mers to a file. Default is False.
+        save_path (str|None, optional): The path to save the generated results. Default is None.
+        chunk_size (int, optional): The chunk size for loading sequences. \
+        Default is 100.
+        
+    Returns:
+        list[str]: A list of exclusive k-mers.
+    """
+    message.info_start_objetive('get-only-kmers method')
+    seq_kmers = load_sequences(
+        file_path=sequence_path,
+        word=word,
+        step=step,
+        dictonary=dictonary,
+        reference=False,
+        chunk_size=chunk_size,
+    )
+    ref_kmers = load_sequences(
+        file_path=reference_path,
+        word=word,
+        step=step,
+        dictonary=dictonary,
+        reference=True,
+        chunk_size=chunk_size,
+    )
+
+    seq_kmers_exclusive = kmers_difference(seq_kmers, ref_kmers)
+    message.info_founded_exclusive_kmers(len(seq_kmers_exclusive))
+
+    if save_kmers:
+        save_exclusive_kmers(
+            sequence_path=sequence_path,
+            seq_kmers_exclusive=seq_kmers_exclusive,
+            save_path=save_path,
+        )
+    message.info_done()
+
+    return seq_kmers_exclusive
+
+
 def get_variants_intersection(
     save_path: str, intersection_seletion: str = 'ALL'
 ) -> defaultdict[str, list[str]]:

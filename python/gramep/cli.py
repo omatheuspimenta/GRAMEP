@@ -4,6 +4,7 @@ from gramep.classify_utils import predict as _predict
 from gramep.config import execute_configparser
 from gramep.grid_search import grid_search as _grid_search
 from gramep.mutations import get_mutations as _get_mutations
+from gramep.mutations import get_only_kmers as _get_only_kmers
 from gramep.mutations import (
     get_variants_intersection as _get_variants_intersection,
 )
@@ -140,6 +141,63 @@ def get_mutations(
 
 
 @app.command()
+def get_only_kmers(
+    reference_path: Annotated[
+        str,
+        Option(
+            '--rpath', help=':open_file_folder: Path to reference sequence.'
+        ),
+    ],
+    sequence_path: Annotated[
+        str, Option('--spath', help=':open_file_folder: Path to sequences.')
+    ],
+    word: Annotated[
+        int, Option('--word', '-w', help=':straight_ruler: Word size.')
+    ],
+    step: Annotated[
+        int, Option('--step', '-s', help=':next_track_button: Step size.')
+    ],
+    dictonary: Annotated[
+        str,
+        Option(
+            '--dictonary',
+            '-d',
+            help=':dna::book: DNA dictionary.',
+            shell_complete=complete_dicts,
+        ),
+    ] = 'DNA',
+    save_kmers: Annotated[
+        bool,
+        Option('--save-kmers', help=':floppy_disk: Save exclusive k-mers.'),
+    ] = False,
+    save_path: Annotated[
+        str,
+        Option('--save-path', help=':open_file_folder: Path to save results.'),
+    ] = None,
+    chunk_size: Annotated[
+        int,
+        Option(
+            '--chunk-size',
+            help=':package: Chunk size for loading sequences.',
+        ),
+    ] = 100,
+):
+    """
+    Get only  exclusive k-mers.
+    """
+    _get_only_kmers(
+        reference_path=reference_path,
+        sequence_path=sequence_path,
+        word=word,
+        step=step,
+        dictonary=dictonary,
+        save_kmers=save_kmers,
+        save_path=save_path,
+        chunk_size=chunk_size,
+    )
+
+
+@app.command()
 def get_intersection(
     save_path: Annotated[
         str,
@@ -185,6 +243,21 @@ def classify(
             help=':open_file_folder: Path to directory containing variants.',
         ),
     ],
+    should_get_kmers: Annotated[
+        bool,
+        Option(
+            '--should-get-kmers',
+            help=':straight_ruler: Get only k-mers.',
+        ),
+    ] = False,
+    reference_path: Annotated[
+        str,
+        Option(
+            '--reference-path',
+            '-rpath',
+            help=':open_file_folder: Path to reference sequence.',
+        ),
+    ] = None,
     dictonary: Annotated[
         str,
         Option(
@@ -231,6 +304,8 @@ def classify(
         step=step,
         save_path=save_path,
         dir_path=dir_path,
+        should_get_kmers=should_get_kmers,
+        reference_path=reference_path,
         dictonary=dictonary,
         should_save_data=should_save_data,
         should_save_model=should_save_model,

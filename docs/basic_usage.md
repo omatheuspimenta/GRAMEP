@@ -12,6 +12,7 @@ Welcome to the GRAMEP "Basic Usage" handbook. This section provides a starting p
 GRAMEP is a multi-purpose Command Line Interface (CLI) software for genomics analysis. It provides a variety of sophisticated tools packaged in subcommands, allowing users to efficiently execute specified tasks. The following subcommands are provided to enable various genomics capabilities:
 
 `get-mutations`: Perform k-mer analysis and generate optional reports.  
+`get-only-kmers`: Get only the exclusive k-mers.   
 `get-intersection`: Find intersections between variants in your data.  
 `classify`: Use this command for variant classification.  
 `predict`: Make predictions on variants.  
@@ -151,6 +152,27 @@ Example of graphical representation:
 ![results_gamma](assets/results.png){width="800" .center}
 The y-axis of the graph represents the mutations, with the frequency of occurrence displayed just below each mutation label. Meanwhile, the x-axis corresponds to the reference genome.
 
+#### Executing only the Extraction of Exclusive K-mers
+If you only need the kmers unique to the variant, you can get them via the `get-only-kmers` command.
+
+<div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep get-only-kmers --help</span><span data-ty><br> Usage: gramep get-only-kmers [OPTIONS]                                                                                                      
+                                                                                                                                             
+ Get only  exclusive k-mers.                                                                                                                 
+                                                                                                                                             
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *  --rpath               TEXT     📂 Path to reference sequence. [default: None] [required]                                               │
+│ *  --spath               TEXT     📂 Path to sequences. [default: None] [required]                                                        │
+│ *  --word        -w      INTEGER  📏 Word size. [default: None] [required]                                                                │
+│ *  --step        -s      INTEGER  ⏭ Step size. [default: None] [required]                                                                 │
+│    --dictonary   -d      TEXT     🧬📖 DNA dictionary. [default: DNA]                                                                     │
+│    --save-kmers                   💾 Save exclusive k-mers.                                                                               │
+│    --save-path           TEXT     📂 Path to save results. [default: None]                                                                │
+│    --chunk-size          INTEGER  📦 Chunk size for loading sequences. [default: 100]                                                     │
+│    --help                         Show this message and exit.                                                                             │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+<br></span></div>
+
 #### Execution in Cases with Pre-existing Files of Exclusive K-mers
 
 If you already possess a file containing the most informative exclusive k-mers, you can effortlessly execute the GRAMEP method by specifying during the execution call that this file will be used.
@@ -282,22 +304,25 @@ One file`.tree` extension containing the tree in Newick format is generated. Usi
 The process of training and validating a prediction model is accomplished using the `classify` command. To access additional information about this command and its options, simply include the `--help` flag when using it.
 
 <div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep classify --help</span><span data-ty>                                                                                                                           
- Usage: gramep classify [OPTIONS]                                                                                         
-                                                                                                                          
- Classify variants.                                                                                                       
-                                                                                                                          
-╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --word                          -w          INTEGER  📝 Word size. [default: None] [required]                       │
-│ *  --step                          -s          INTEGER  ⏭ Step size. [default: None] [required]                        │
-│ *  --save-path                                 TEXT     📂 Path to save results. [default: None] [required]            │
-│ *  --dir-path                      -dpath      TEXT     📂 Path to directory containing variants. [default: None]      │
-│                                                         [required]                                                     │
-│    --dictonary                     -d          TEXT     🧬📖 DNA dictionary. [default: ACTG]                           │
-│    --should-save-data                                   💾 Save data used for classification. [default: True]          │
-│    --should-save-model                                  💾 Save model used for classification. [default: True]         │
-│    --should-save-confusion-matrix                       💾🟥🟦 Save confusion matrix. [default: True]                  │
-│    --help                                               Show this message and exit.                                    │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ Usage: gramep classify [OPTIONS]                                                                                                            
+                                                                                                                                             
+ Classify variants.                                                                                                                          
+                                                                                                                                             
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *  --word                          -w          INTEGER  📏 Word size. [default: None] [required]                                          │
+│ *  --step                          -s          INTEGER  ⏭ Step size. [default: None] [required]                                           │
+│ *  --save-path                                 TEXT     📂 Path to save results. [default: None] [required]                               │
+│ *  --dir-path                      -dpath      TEXT     📂 Path to directory containing variants. [default: None] [required]              │
+│    --should-get-kmers                                   📏 Get only k-mers.                                                               │
+│    --reference-path                -rpath      TEXT     📂 Path to reference sequence. [default: None]                                    │
+│    --dictonary                     -d          TEXT     🧬📖 DNA dictionary. [default: DNA]                                               │
+│    --should-save-data                                   💾 Save data used for classification. [default: True]                             │
+│    --should-save-model                                  💾🤖 Save model used for classification. [default: True]                          │
+│    --should-save-confusion-matrix                       💾🧮 Save confusion matrix. [default: True]                                       │
+│    --chunk-size                                INTEGER  📦 Chunk size for loading sequences. [default: 100]                               │
+│    --help                                               Show this message and exit.                                                       │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
  <br></span></div>
 
 The `classify` subcommand of GRAMEP is used to train classification model to classify biological sequences.

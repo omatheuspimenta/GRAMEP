@@ -332,3 +332,22 @@ def test_get_mutations_all_dict(caplog):
     )
     assert result.exit_code == 0
     assert 'Done!' in caplog.text
+
+
+def test_get_only_kmers(caplog):
+    result = runner.invoke(
+        app,
+        [
+            'get-only-kmers',
+            '--rpath',
+            REF_PATH,
+            '--spath',
+            SEQ_PATH + 'Alpha.fasta',
+            '-w',
+            '10',
+            '-s',
+            '1',
+        ],
+    )
+    assert result.exit_code == 0
+    assert 'Done!' in caplog.text
