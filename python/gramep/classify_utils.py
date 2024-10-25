@@ -325,12 +325,11 @@ def classify(
     exclusive_kmers = None
     if should_get_kmers:
         file_list = [
-            dir_path + '/' + name
-            for name in listdir(dir_path)
-            if fnmatch(name, '*.fasta')
+            name for name in listdir(dir_path) if fnmatch(name, '*.fasta')
         ]
+        files = [dir_path + '/' + name for name in file_list]
         with joblib_progress(
-            'Extracting exclusive k-mers ...', total=len(file_list)
+            'Extracting exclusive k-mers ...', total=len(files)
         ):
             exclusive_kmers = Parallel(n_jobs=-2)(
                 delayed(get_only_kmers)(
@@ -342,7 +341,7 @@ def classify(
                     save_kmers=False,
                     chunk_size=chunk_size,
                 )
-                for file in file_list
+                for file in files
             )
 
         exclusive_kmers = np.unique(np.concatenate(exclusive_kmers))
