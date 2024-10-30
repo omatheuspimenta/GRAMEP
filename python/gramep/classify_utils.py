@@ -116,6 +116,7 @@ def extract_features(
 
     if variants_kmers is None:
         variants_kmers = load_variants_kmers(save_path=save_path)
+        message.info_founded_features(len(variants_kmers))
 
     file_list = [
         dir_path + '/' + name
@@ -137,8 +138,6 @@ def extract_features(
 def process_dataframe(
     data_frame: pd.DataFrame,
     dir_path: str = None,
-    should_save_data: bool = False,
-    should_save_model: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
     Process a DataFrame and optionally save data and model.
@@ -151,9 +150,6 @@ def process_dataframe(
         data_frame (pd.DataFrame): The DataFrame to be processed.
         dir_path (str, optional): The directory path for saving data and model. \
         Default is None.
-        should_save_data (bool, optional): Whether to save processed data. \
-        Default is False.
-        should_save_model (bool, optional): Whether to save a model. Default is False.
 
     Returns:
         tuple[pd.DataFrame, np.ndarray]: A tuple containing the processed \
@@ -169,37 +165,38 @@ def process_dataframe(
     data_frame.drop(columns=['CLASS'], axis=1, inplace=True)
     data_frame.replace([np.inf, -np.inf], 0, inplace=True)
     data_frame.replace(np.nan, 0, inplace=True)
-    df_col_names = data_frame.columns
+
+    df = data_frame.sort_index(axis=1)
+    del data_frame
+
+    df_col_names = df.columns
 
     # MinMax Scaler
     minMax_scaler = MinMaxScaler()
-    minMax_scaler.fit(data_frame)
-    df_minmax = minMax_scaler.transform(data_frame)
-    data_frame = pd.DataFrame(df_minmax)
+    minMax_scaler.fit(df)
+    df_minmax = minMax_scaler.transform(df)
+    df = pd.DataFrame(df_minmax)
     del df_minmax
     label_encdr = LabelEncoder()
     class_values = label_encdr.fit_transform(class_values)
 
-    data_frame.columns = df_col_names
-    data_frame['CLASS'] = class_values
+    df.columns = df_col_names
+    df['CLASS'] = class_values
 
-    if should_save_data:
-        save_data(
-            data_frame=data_frame,
-            class_names_to_save=class_names_to_save,
-            dir_path=dir_path,
-        )
-    if should_save_model:
-        save_ranges(ranges=minMax_scaler, dir_path=dir_path)
-    return data_frame, name_class
+    save_data(
+        data_frame=df,
+        class_names_to_save=class_names_to_save,
+        dir_path=dir_path,
+    )
+
+    save_ranges(ranges=minMax_scaler, dir_path=dir_path)
+    return df, name_class
 
 
 def sequence_classification(
     data_frame: pd.DataFrame,
     name_class: np.ndarray,
     dir_path: str,
-    should_save_model: bool = False,
-    should_save_confusion_matrix: bool = False,
 ) -> None:
     """
     Perform sequence classification based on provided data and options.
@@ -213,10 +210,6 @@ def sequence_classification(
         data_frame (pd.DataFrame): The data frame containing sequence data and features.
         name_class (np.ndarray): The array of class names corresponding to the data.
         dir_path (str): The path to the directory for saving model and plot files.
-        should_save_model (bool, optional): Whether to save the trained model. \
-        Default is False.
-        should_save_confusion_matrix (bool, optional): Whether to save the \
-        confusion matrix plot. Default is False.
 
     Returns:
         None
@@ -235,8 +228,7 @@ def sequence_classification(
     rf_classifier = RandomForestClassifier(n_estimators=100)
     rf_classifier.fit(x_train, y_train)
 
-    if should_save_model:
-        save_model(model=rf_classifier, dir_path=dir_path)
+    save_model(model=rf_classifier, dir_path=dir_path)
 
     # Make predictions on the test set
     y_pred = rf_classifier.predict(x_test)
@@ -266,15 +258,14 @@ def sequence_classification(
     save_metrics(acc=acc, metrics=metrics, dir_path=dir_path)
     del acc, metrics
 
-    if should_save_confusion_matrix:
-        conf_mtx = confusion_matrix(y_true=y_test, y_pred=y_pred)
-        vmax = max(np.unique(y_test, return_counts=True)[1])
-        save_confusion_matrix(
-            conf_mtx=conf_mtx,
-            name_class=name_class,
-            vmax=vmax,
-            dir_path=dir_path,
-        )
+    conf_mtx = confusion_matrix(y_true=y_test, y_pred=y_pred)
+    vmax = max(np.unique(y_test, return_counts=True)[1])
+    save_confusion_matrix(
+        conf_mtx=conf_mtx,
+        name_class=name_class,
+        vmax=vmax,
+        dir_path=dir_path,
+    )
     return
 
 
@@ -283,12 +274,9 @@ def classify(
     step: int,
     save_path: str,
     dir_path: str,
-    should_get_kmers: bool = False,
+    get_kmers: bool = False,
     reference_path: str | None = None,
     dictonary: str = 'DNA',
-    should_save_data: bool = True,
-    should_save_model: bool = True,
-    should_save_confusion_matrix: bool = True,
     chunk_size: int = 100,
 ):
     """
@@ -305,17 +293,11 @@ def classify(
         step (int): The step size for moving the sliding window.
         save_path (str): The path to save the processed data and model files.
         dir_path (str): The path to the directory containing sequence data.
-        should_get_kmers (bool, optional): Whether to extract exclusive k-mers. \
+        get_kmers (bool, optional): Whether to extract exclusive k-mers. \
         Default is False.
         reference_path (str, optional): The path to the reference sequence data file. \
         Default is None.
         dictonary (str): The DNA dictionary for k-mer analysis. Default is 'DNA'.
-        should_save_data (bool, optional): Whether to save processed data. \
-        Default is True.
-        should_save_model (bool, optional): Whether to save the trained model. \
-        Default is True.
-        should_save_confusion_matrix (bool, optional): Whether to save the \
-        confusion matrix plot. Default is True.
         chunk_size (int, optional): The chunk size for loading sequences. \
         Default is 100.
 
@@ -323,7 +305,7 @@ def classify(
         Message class: A message confirming the classification pipeline has completed.
     """
     exclusive_kmers = None
-    if should_get_kmers:
+    if get_kmers:
         file_list = [
             name for name in listdir(dir_path) if fnmatch(name, '*.fasta')
         ]
@@ -338,13 +320,15 @@ def classify(
                     word=word,
                     step=step,
                     dictonary=dictonary,
-                    save_kmers=False,
+                    save_path=save_path,
                     chunk_size=chunk_size,
                 )
                 for file in files
             )
 
         exclusive_kmers = np.unique(np.concatenate(exclusive_kmers))
+
+        message.info_founded_features(len(exclusive_kmers))
 
     data_frame = extract_features(
         word=word,
@@ -360,15 +344,11 @@ def classify(
     df_process, name_class = process_dataframe(
         data_frame=data_frame,
         dir_path=save_path,
-        should_save_data=should_save_data,
-        should_save_model=should_save_model,
     )
     sequence_classification(
         data_frame=df_process,
         name_class=name_class,
         dir_path=save_path,
-        should_save_model=should_save_model,
-        should_save_confusion_matrix=should_save_confusion_matrix,
     )
     return message.info_done()
 
@@ -430,6 +410,7 @@ def extract_features_to_predict(
         )
 
     data_frame = pd.DataFrame(features)
+
     return data_frame
 
 
@@ -459,16 +440,20 @@ def process_dataframe_predict(
     data_frame.drop(columns=['ID'], axis=1, inplace=True)
     data_frame.replace([np.inf, -np.inf], 0, inplace=True)
     data_frame.replace(np.nan, 0, inplace=True)
-    df_col_names = data_frame.columns
 
-    df_minmax = minMax_scaler.transform(data_frame)
-    data_frame = pd.DataFrame(df_minmax)
+    df = data_frame.sort_index(axis=1)
+    del data_frame
+
+    df_col_names = df.columns
+
+    df_minmax = minMax_scaler.transform(df)
+    df = pd.DataFrame(df_minmax)
     del df_minmax
 
-    data_frame.columns = df_col_names
-    data_frame['ID'] = id_values
+    df.columns = df_col_names
+    df['ID'] = id_values
 
-    return data_frame
+    return df
 
 
 def predict_data(

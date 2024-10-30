@@ -12,10 +12,6 @@ Contents:
     * make_report: Generate a report for variations and annotations in a sequence.
     * get_colours: Get a dictionary of colours based on the specified palette.
     * next_colour: Get the next colour from the predefined colour cycle.
-    * get_newick_list: Construct a Newick tree string from a SciPy hierarchical \
-    clustering ClusterNode.
-    * get_newick_str: Generate a Newick tree string from a SciPy hierarchical \
-    clustering tree.
 
 Todo:
     * Implement tests.
@@ -24,7 +20,6 @@ from itertools import cycle
 
 import pandas as pd
 from gramep.messages import Messages
-from scipy.cluster.hierarchy import ClusterNode
 
 message = Messages()
 """
@@ -269,62 +264,3 @@ def next_colour() -> str:
         str: The next colour from the colour cycle.
     """
     return next(COLOR_CYCLE)
-
-
-def get_newick_list(
-    node: ClusterNode,
-    newick: list[str],
-    parentdist: float,
-    leaf_names: list[str],
-) -> list[str]:
-    """
-    Construct a Newick tree string from a SciPy hierarchical clustering ClusterNode.
-
-    This recursive function aids in building a Newick output string from a scipy.cluster.hierarchy.to_tree input
-    with user-specified leaf node names.
-
-    Notes:
-        This function is intended for use with the `to_newick` function.
-
-    Args:
-        node (scipy.cluster.hierarchy.ClusterNode): The root node obtained from scipy.cluster.hierarchy.to_tree,
-            representing the hierarchical clustering linkage matrix.
-        parentdist (float): The distance of the parent node of the current `node`.
-        newick (list of string): An accumulator list for the Newick string output.
-            It needs to be reversed and concatenated (i.e., `''.join(newick)`) for the final output.
-        leaf_names (list of string): The names of leaf nodes.
-
-    Returns:
-        list of string: The `newick` list containing Newick output strings.
-    """
-    if node.is_leaf():
-        return newick + [f'{leaf_names[node.id]}:{parentdist - node.dist}']
-
-    if len(newick) > 0:
-        newick.append(f'):{parentdist - node.dist}')
-    else:
-        newick.append(');')
-    newick = get_newick_list(node.get_left(), newick, node.dist, leaf_names)
-    newick.append(',')
-    newick = get_newick_list(node.get_right(), newick, node.dist, leaf_names)
-    newick.append('(')
-    return newick
-
-
-def get_newick_str(tree: ClusterNode, leaf_names: list[str]) -> str:
-    """
-    Generate a Newick tree string from a SciPy hierarchical clustering tree.
-
-    This function converts a SciPy ClusterNode tree to a Newick format string. To use this function, first obtain
-    the root ClusterNode by applying scipy.cluster.hierarchy.to_tree on a hierarchical clustering linkage matrix.
-
-    Args:
-        tree (scipy.cluster.hierarchy.ClusterNode): The root node obtained from scipy.cluster.hierarchy.to_tree,
-            representing the hierarchical clustering linkage matrix.
-        leaf_names (list of string): The names of leaf nodes.
-
-    Returns:
-        str: The Newick output string.
-    """
-    newick_list = get_newick_list(tree, [], tree.dist, leaf_names)
-    return ''.join(newick_list[::-1])

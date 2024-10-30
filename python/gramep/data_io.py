@@ -24,9 +24,6 @@ Contents:
     * load_exclusive_kmers_file: Load exclusive k-mers from a file.
     * load_mutations: Load and return the unique mutations.
     * load_reports: Load and return the reports dirnames.
-    * load_seqs_phylogenic: Loads the sequences and returns the mutations in binary format.
-    * load_dataframe_phylo: Load the dataframe from sequences and mutations.
-    * save_newick: Save the newick string to a file.
     
 Todo:
     * Implement tests.
@@ -37,15 +34,11 @@ from os import scandir
 from pathlib import Path
 
 import numpy as np
-import numpy.typing as npt
 import pandas as pd
-import polars as pl
 from gffpandas import gffpandas as gffpd
 from gramep.helpers import get_sequence_interval
 from gramep.messages import Messages
 from gramep.utilrs import get_kmers, write_ref
-from joblib import Parallel, delayed
-from joblib_progress import joblib_progress
 from matplotlib import pyplot as plt
 from rich.progress import (
     BarColumn,
@@ -566,7 +559,6 @@ def save_confusion_matrix(
     name_class: np.ndarray,
     vmax: int,
     dir_path: str,
-    is_conf_mtx: bool = True,
 ):
     """
     Save a confusion matrix plot to a file.
@@ -581,30 +573,18 @@ def save_confusion_matrix(
         name_class (np.ndarray): The array of class names corresponding to the matrix.
         vmax (int): The maximum value for the color scale in the plot.
         dir_path (str): The path to the directory where the plot file will be saved.
-        is_conf_mtx (bool): Boolean. If True, print the Confusion Matrix title. Else, distance text.
 
     Returns:
         Message class
     """
 
-    # if len(conf_mtx) > 200:
-    #     figsize = (int(len(conf_mtx) / 4), int(len(conf_mtx) / 4))
-    if is_conf_mtx:
-        path_dir = str(Path(dir_path).parent) + '/classify/results'
-        path = Path(path_dir)
-        path.mkdir(mode=0o777, parents=True, exist_ok=True)
-        text = 'Heatmap for Random Forest\nClassification Algorithm'
-        save_name = '/confusion_matrix.pdf'
-        fmt = 'd'
-        figsize = (20, 15)
-    else:
-        text = 'Heatmap for Distance Matrix'
-        save_name = '/heatmap.pdf'
-        fmt = '.2f'
-        path_dir = str(Path(dir_path).parent) + '/phylogenics/'
-        path = Path(path_dir)
-        path.mkdir(mode=0o777, parents=True, exist_ok=True)
-        figsize = (25, 25)
+    path_dir = str(Path(dir_path).parent) + '/classify/results'
+    path = Path(path_dir)
+    path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    text = 'Heatmap for Random Forest\nClassification Algorithm'
+    save_name = '/confusion_matrix.pdf'
+    fmt = 'd'
+    figsize = (20, 15)
 
     cm_fig = plt.figure(figsize=figsize)
     axes = plt.axes()
@@ -622,9 +602,8 @@ def save_confusion_matrix(
     )
     axes.set_title(text, fontsize=20, pad=15)
     cm_fig.savefig(path_dir + save_name, dpi=300)
-    if is_conf_mtx:
-        return message.result_confusion_matrix(path_dir)
-    return message.result_heatmap(path_dir)
+
+    return message.result_confusion_matrix(path_dir)
 
 
 def save_predict_data(
@@ -651,182 +630,3 @@ def save_predict_data(
     )
     message.info_done()
     return message.info_predictions_saved(dir_path)
-
-
-def load_exclusive_kmers_file(path_exclusive_kmers: str) -> list[str]:
-    """
-    Load exclusive k-mers from a file.
-
-    This function loads a list of exclusive k-mers from a file located at \
-    the specified path.
-    The function supports loading k-mers from both plain text files \
-    and binary (pickle) files.
-
-    Args:
-        path_exclusive_kmers (str): The path to the file containing exclusive k-mers.
-
-    Returns:
-        list[str]: A list of exclusive k-mers loaded from the file.
-
-    Raises:
-        ValueError: If the k-mers have different lengths in the file.
-    """
-    if path_exclusive_kmers.split('.')[-1] != 'sav':
-        with open(path_exclusive_kmers, 'r') as file_exclusive_kmers:
-            seq_kmers_exclusive = file_exclusive_kmers.read().splitlines()
-        it = iter(seq_kmers_exclusive)
-        the_len = len(next(it))
-        if not all(len(kmer_len) == the_len for kmer_len in it):
-            return message.error_different_kmers_len
-        else:
-            return seq_kmers_exclusive
-    else:
-        with open(path_exclusive_kmers, 'rb') as file_exclusive_kmers:
-            return pickle.load(file_exclusive_kmers)
-
-
-def load_mutations(save_path: str) -> npt.NDArray[np.str_]:
-    """
-    Load and return the unique mutations.
-
-    This function loads the mutations from the specified directory and
-    returns them as a NumPy array.
-
-    Args:
-        save_path (str): The path to the directory containing subfolders with \
-        saved mutations .sav files.
-
-    Returns:
-        np.ndarray: A NumPy array containing the unique set of mutations.
-    """
-    subfolders = [f.path for f in scandir(save_path) if f.is_dir()]
-    loads = []
-    for dirname in subfolders:
-        with open(
-            dirname + '/' + dirname.split(sep='/')[-1] + '_variations.sav',
-            'rb',
-        ) as f:
-            mutations = [''.join(item) for item in pickle.load(f)]
-            loads.extend(mutations)
-
-    return np.unique(loads)
-
-
-def load_reports(save_path: str) -> list[str]:
-    """
-    Load and return the reports dirnames.
-
-    This function loads the reports directory and
-    returns them as a list of strings.
-
-    Args:
-        save_path (str): The path to the directory containing subfolders with \
-        reports in _report.csv format.
-
-    Returns:
-        list[str]: A list of strings containing the reports dirnames.
-    """
-    subfolders = [f.path for f in scandir(save_path) if f.is_dir()]
-    loads_names = [
-        dirname + '/' + dirname.split(sep='/')[-1] + '_report.csv'
-        for dirname in subfolders
-    ]
-    return loads_names
-
-
-def load_seqs_phylogenic(
-    loadname: str, variants_mutations: np.ndarray
-) -> defaultdict[str, int]:
-    """
-    Loads the sequences and returns the mutations in binary format.
-
-    This function loads the sequences from the report in specified directory and
-    returns them as a dictionary of mutations in binary format.
-
-    Args:
-        loadname (str): The path to the report file.
-        variants_mutations (np.ndarray): The unique set of mutations.
-
-    Returns:
-        defaultdict[str, int]: A dictionary of mutations in binary format.
-    """
-
-    report = pl.scan_csv(
-        loadname,
-        separator=';',
-        infer_schema_length=0,
-    )
-    report = report.drop_nulls()
-    report_mutations = (
-        report.lazy()
-        .with_columns(
-            (
-                pl.col('modification_localization_in_reference')
-                + ':'
-                + pl.col('reference_snp')
-                + pl.col('variant_snp')
-            ).alias('mutations')
-        )
-        .collect()
-        .group_by('sequence_id')
-        .agg(pl.col('mutations'))
-    )
-    report_group = dict(report_mutations.iter_rows())
-    ret_sample = []
-    for k, v in report_group.items():
-        sample = defaultdict(int, {k: 0 for k in variants_mutations})
-        for item in np.unique(v):
-            sample[item] += 1
-        sample['ID'] = k + '_' + loadname.split('/')[-2]
-        ret_sample.append(sample)
-
-    return ret_sample
-
-
-def load_dataframe_phylo(save_path: str) -> pl.DataFrame:
-    """
-    Load the dataframe from sequences and mutations.
-
-    This function loads the sequences from the report in specified directory and
-    returns them as a dataframe, where the columns are the mutations and the rows
-    are the sequences.
-
-    Args:
-        save_path (str): The path to the directory containing subfolders with \
-        reports in _report.csv format.
-
-    Returns:
-        pl.DataFrame: A dataframe containing the mutations in binary format.
-    """
-    variants_mutations = load_mutations(save_path=save_path)
-    loads_names = load_reports(save_path=save_path)
-
-    with joblib_progress(
-        '[cyan]Loading reports files ...', total=len(list(loads_names))
-    ):
-        feat_list = Parallel(n_jobs=-2)(
-            delayed(load_seqs_phylogenic)(filename, variants_mutations)
-            for filename in loads_names
-        )
-
-    return pl.DataFrame(list(np.hstack(feat_list))).lazy()
-
-
-def save_newick(newick_str: str, save_path: str):
-    """
-    Save a Newick tree string to a file.
-
-    This function saves a Newick tree string to a file.
-
-    Args:
-        newick_str (str): The Newick tree string.
-        save_path (str): The path to the file to save the Newick tree string to.
-    """
-    path_dir = str(Path(save_path).parent) + '/phylogenics/'
-    path = Path(path_dir)
-    path.mkdir(mode=0o777, parents=True, exist_ok=True)
-    path_save = path_dir + '/newick.tree'
-    with open(path_save, 'w') as f:
-        f.write(newick_str)
-
-    return message.info_newick_saved(path_dir)

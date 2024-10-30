@@ -2,7 +2,6 @@ from configparser import ConfigParser
 
 from gramep.classify_utils import classify, predict
 from gramep.mutations import get_mutations, get_variants_intersection
-from gramep.phylogenics import get_phylogenic
 
 
 def execute_configparser(objective: str, config_file: str):
@@ -41,13 +40,6 @@ def execute_configparser(objective: str, config_file: str):
             create_report = config_parser.getboolean(
                 'mutations', 'create_report'
             )
-            save_kmers = config_parser.getboolean('mutations', 'save_kmers')
-            load_exclusive_kmers = config_parser.getboolean(
-                'mutations', 'load_exclusive_kmers'
-            )
-            path_exclusive_kmers = str(
-                config_parser.get('mutations', 'path_exclusive_kmers')
-            )
             chunk_size = config_parser.getint('mutations', 'chunk_size')
 
             get_mutations(
@@ -60,9 +52,6 @@ def execute_configparser(objective: str, config_file: str):
                 snps_max=snps_max,
                 dictonary=dictonary,
                 create_report=create_report,
-                save_kmers=save_kmers,
-                load_exclusive_kmers=load_exclusive_kmers,
-                path_exclusive_kmers=path_exclusive_kmers,
                 chunk_size=chunk_size,
             )
         case 'get-intersection':
@@ -81,15 +70,7 @@ def execute_configparser(objective: str, config_file: str):
             save_path = str(config_parser.get('classify', 'save_path'))
             dir_path = str(config_parser.get('classify', 'dir_path'))
             dictonary = str(config_parser.get('classify', 'dictonary'))
-            should_save_data = config_parser.getboolean(
-                'classify', 'should_save_data'
-            )
-            should_save_model = config_parser.getboolean(
-                'classify', 'should_save_model'
-            )
-            should_save_confusion_matrix = config_parser.getboolean(
-                'classify', 'should_save_confusion_matrix'
-            )
+            get_kmers = config_parser.getboolean('classify', 'get_kmers')
             chunk_size = config_parser.getint('classify', 'chunk_size')
 
             classify(
@@ -97,10 +78,8 @@ def execute_configparser(objective: str, config_file: str):
                 step=step,
                 save_path=save_path,
                 dir_path=dir_path,
+                get_kmers=get_kmers,
                 dictonary=dictonary,
-                should_save_data=should_save_data,
-                should_save_model=should_save_model,
-                should_save_confusion_matrix=should_save_confusion_matrix,
                 chunk_size=chunk_size,
             )
         case 'predict':
@@ -131,10 +110,3 @@ def execute_configparser(objective: str, config_file: str):
                 load_model_path=load_model_path,
                 chunk_size=chunk_size,
             )
-        case 'phylogenic':
-            save_path = str(config_parser.get('phylogenic', 'save_path'))
-            save_heatmap = config_parser.getboolean(
-                'phylogenic', 'save_heatmap'
-            )
-
-            get_phylogenic(save_path=save_path, save_heatmap=save_heatmap)

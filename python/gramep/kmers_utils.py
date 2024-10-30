@@ -5,7 +5,6 @@ kmers_utils
 This module provides utility functions for working with k-mers.
 
 Contents:
-    * select_kmers: Select k-mers from a dictionary based on a frequency threshold.
     * kmers_difference: Calculate the difference in k-mers between two defaultdicts.
     * kmers_intersections: Calculate the intersection in k-mers between two defaultdicts.
 
@@ -17,7 +16,7 @@ the 'dictionary' parameter.
 Todo:
     * Implement tests.
 """
-from collections import Counter, defaultdict
+from collections import defaultdict
 
 
 def kmers_difference(
@@ -26,7 +25,7 @@ def kmers_difference(
     """
     Calculate the difference in k-mers between two defaultdicts.
 
-    This function takes two defaultdicts containing k-mers and their frequency counts,
+    This function takes two defaultdicts containing k-mers and their frequency positions counts,
     calculates the k-mer differences between them, and returns a list of k-mers that
     are present in the 'seq_kmers' defaultdict but not in the 'ref_kmers' defaultdict.
 
@@ -39,9 +38,8 @@ def kmers_difference(
     Returns:
         list[str]: A list of k-mers present in 'seq_kmers' but not in 'ref_kmers'.
     """
-    seq = Counter(seq_kmers)
-    ref = Counter(ref_kmers)
-
+    seq = set(seq_kmers)
+    ref = set(ref_kmers)
     return list(seq - ref)
 
 
@@ -51,7 +49,7 @@ def kmers_intersections(
     """
     Calculate the intersection in k-mers between two defaultdicts.
 
-    This function takes two defaultdicts containing k-mers and their frequency counts,
+    This function takes two defaultdicts containing k-mers and their frequency positions counts,
     calculates the k-mer intersection between them, and returns a list of k-mers that
     are present in both defaultdicts.
 
@@ -64,7 +62,7 @@ def kmers_intersections(
     Returns:
         list[str]: A list of k-mers present in both defaultdicts.
     """
-    seq = Counter(seq_kmers)
-    ref = Counter(ref_kmers)
+    seq = set(seq_kmers)
+    ref = set(ref_kmers)
 
-    return list(seq & ref)
+    return list(seq.intersection(ref))

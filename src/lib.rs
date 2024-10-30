@@ -15,6 +15,7 @@ use regex::Regex;
 use rustc_hash::FxHashMap;
 use spinners::{Spinner, Spinners};
 use std::collections::HashSet;
+use std::io::Read;
 use std::sync::Arc;
 
 enum Value {
@@ -29,6 +30,63 @@ impl ToPyObject for Value {
             Value::Str(s) => s.to_object(py),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct SearchRange {
+    start: usize,
+    end: usize,
+}
+
+fn get_search_ranges(positions: &[u8], ref_end: usize, seq_len: usize) -> Vec<SearchRange> {
+    let mut ranges = Vec::new();
+    let mut i = 0;
+
+    // Calculate sequence length variation
+    let seq_len_variation = if seq_len > ref_end {
+        1.0 - (ref_end as f64 / seq_len as f64)
+    } else {
+        1.0 - (seq_len as f64 / ref_end as f64)
+    };
+
+    // Calculate additional positions to add based on sequence length variation
+    let additional_positions = if seq_len_variation > 0.01 {
+        ((seq_len_variation / 0.01).ceil() as usize).max(1)
+    } else {
+        1
+    };
+
+    while i < positions.len() {
+        if positions[i] == 1 {
+            let start_pos = i;
+            // Find consecutive ones
+            while i + 1 < positions.len() && positions[i + 1] == 1 {
+                i += 1;
+            }
+            let end_pos = i;
+
+            // Calculate base range from positions
+            let mut start_idx = ((start_pos as f64 * 0.01) * ref_end as f64) as usize;
+            let mut end_idx = (((end_pos + 1) as f64 * 0.01) * ref_end as f64) as usize;
+
+            // Add additional positions based on sequence length variation
+            if start_idx >= additional_positions {
+                start_idx -= additional_positions;
+            } else {
+                start_idx = 0;
+            }
+
+            end_idx = (end_idx + additional_positions).min(ref_end);
+
+            ranges.push(SearchRange {
+                start: start_idx,
+                end: end_idx,
+            });
+        }
+        i += 1;
+    }
+
+    ranges
 }
 
 /// Checks if a sequence contains any characters that are not part of the specified dictionary.
@@ -63,6 +121,7 @@ impl ToPyObject for Value {
 /// assert_eq!(contains_forbidden_chars("ANNNCTGTG", "ALL"), true);
 /// ```
 ///
+#[inline]
 fn contains_forbidden_chars(seq: &str, dict: &str) -> bool {
     let alphabet = &get_alphabet(dict);
     let re = regex::Regex::new(alphabet).unwrap();
@@ -93,6 +152,7 @@ fn contains_forbidden_chars(seq: &str, dict: &str) -> bool {
 /// assert_eq!(get_alphabet("Unknown"), "B|D|E|F|H|I|J|K|L|M|O|P|Q|R|S|V|W|X|Y|Z");
 /// ```
 ///
+#[inline]
 fn get_alphabet(dict: &str) -> String {
     let alphabet = String::from(if dict == "DNA" {
         "B|D|E|F|H|I|J|K|L|M|N|O|P|Q|R|S|U|V|W|X|Y|Z"
@@ -144,6 +204,7 @@ fn get_alphabet(dict: &str) -> String {
 /// assert_eq!(kmers, vec![]);
 /// ```
 ///
+#[inline]
 fn split_seq(seq: &str, k: usize, step: usize) -> Vec<String> {
     let end = seq.chars().count() - k + step;
     let mut index = 0;
@@ -252,6 +313,105 @@ fn get_kmer_mutation_index(
 /// - k-mer frequencies.
 /// - An "ID" or "CLASS" entry depending on the `predict_data` flag.
 ///
+// fn count_freq(
+//     seq_path: String,
+//     k: usize,
+//     step: usize,
+//     dict: String,
+//     variants_kmers: Vec<String>,
+//     predict_data: bool,
+//     batch_size: usize,
+// ) -> Vec<FxHashMap<String, Value>> {
+//     let class_name = seq_path.split(".fasta").collect::<Vec<&str>>()[0];
+//     let class_name = class_name.split("/").collect::<Vec<&str>>();
+//     let class_name = class_name.last().unwrap().to_string();
+
+//     let reader = fasta::Reader::from_file(seq_path).unwrap();
+//     let pool: rayon::ThreadPool = rayon::ThreadPoolBuilder::new().build().unwrap();
+//     let (tx, rx) = std::sync::mpsc::channel();
+
+//     // Process sequences in batches
+//     let mut batch = Vec::new();
+//     for result in reader.records() {
+//         let result_data = result.unwrap();
+//         let seq: &[u8] = result_data.seq();
+//         let seq_name = result_data.id().to_string();
+//         let seq_str = String::from_utf8(seq.to_owned()).unwrap();
+//         let seq_str = seq_str.to_uppercase();
+//         if !contains_forbidden_chars(&seq_str, &dict) {
+//             if predict_data {
+//                 batch.push((seq_str, seq_name.clone()));
+//             } else {
+//                 batch.push((seq_str, class_name.clone()));
+//             }
+//             if batch.len() >= batch_size {
+//                 let variants_kmers = variants_kmers.clone();
+//                 let tx = tx.clone();
+//                 let batch_clone = batch.clone();
+//                 batch.clear();
+//                 pool.spawn(move || {
+//                     // let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
+//                     for (seq, seq_class) in batch_clone {
+//                         let mut hm: FxHashMap<String, u32> = FxHashMap::default();
+//                         let mut kmer_hm: FxHashMap<String, Value> = FxHashMap::default();
+//                         let end = seq.chars().count() - k + step;
+//                         let mut index = 0;
+//                         while index + step < end {
+//                             *hm.entry(seq[index..index + k].to_owned()).or_insert(0) += 1;
+//                             index += step;
+//                         }
+//                         for kmer in &variants_kmers {
+//                             *kmer_hm.entry(kmer.to_string()).or_insert(Value::Usize(0)) =
+//                                 Value::Usize(*hm.get(kmer).unwrap_or(&0));
+//                         }
+//                         if predict_data {
+//                             kmer_hm.insert("ID".to_string(), Value::Str(seq_class.clone()));
+//                         } else {
+//                             kmer_hm.insert("CLASS".to_string(), Value::Str(seq_class.clone()));
+//                         }
+//                         tx.send(kmer_hm).unwrap();
+//                     }
+//                 });
+//             }
+//         }
+//     }
+//     // Process any remaining sequences in the last batch
+//     if !batch.is_empty() {
+//         let tx = tx.clone();
+//         let variants_kmers = variants_kmers.clone();
+//         pool.spawn(move || {
+//             // let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
+//             // let variants_kmers = variants_kmers.clone();
+//             for (seq, seq_class) in batch {
+//                 let mut hm: FxHashMap<String, u32> = FxHashMap::default();
+//                 let mut kmer_hm: FxHashMap<String, Value> = FxHashMap::default();
+//                 let end = seq.chars().count() - k + step;
+//                 let mut index = 0;
+//                 while index + step < end {
+//                     *hm.entry(seq[index..index + k].to_owned()).or_insert(0) += 1;
+//                     index += step;
+//                 }
+//                 for kmer in &variants_kmers {
+//                     *kmer_hm.entry(kmer.to_string()).or_insert(Value::Usize(0)) =
+//                         Value::Usize(*hm.get(kmer).unwrap_or(&0));
+//                 }
+//                 if predict_data {
+//                     kmer_hm.insert("ID".to_string(), Value::Str(seq_class.clone()));
+//                 } else {
+//                     kmer_hm.insert("CLASS".to_string(), Value::Str(seq_class.clone()));
+//                 }
+//                 tx.send(kmer_hm).unwrap();
+//             }
+//         });
+//     }
+
+//     drop(tx); // Close all senders
+
+//     let samples = rx.iter().collect::<Vec<FxHashMap<String, Value>>>();
+
+//     samples
+// }
+
 fn count_freq(
     seq_path: String,
     k: usize,
@@ -261,94 +421,102 @@ fn count_freq(
     predict_data: bool,
     batch_size: usize,
 ) -> Vec<FxHashMap<String, Value>> {
-    let class_name = seq_path.split(".fasta").collect::<Vec<&str>>()[0];
-    let class_name = class_name.split("/").collect::<Vec<&str>>();
-    let class_name = class_name.last().unwrap().to_string();
+    // Pre-allocate HashSet for variants_kmers for faster lookups
+    let variants_set: HashSet<_> = variants_kmers.iter().cloned().collect();
 
+    // Extract class name once
+    let class_name = seq_path
+        .split(".fasta")
+        .next()
+        .and_then(|s| s.split('/').last())
+        .unwrap_or("")
+        .to_string();
+
+    // Create a buffer for reading sequences
+    let mut sequences = Vec::with_capacity(batch_size);
     let reader = fasta::Reader::from_file(seq_path).unwrap();
-    let pool: rayon::ThreadPool = rayon::ThreadPoolBuilder::new().build().unwrap();
     let (tx, rx) = std::sync::mpsc::channel();
 
-    // Process sequences in batches
-    let mut batch = Vec::new();
+    // Process sequences in chunks
     for result in reader.records() {
-        let result_data = result.unwrap();
-        let seq: &[u8] = result_data.seq();
-        let seq_name = result_data.id().to_string();
-        let seq_str = String::from_utf8(seq.to_owned()).unwrap();
-        let seq_str = seq_str.to_uppercase();
-        if !contains_forbidden_chars(&seq_str, &dict) {
-            if predict_data {
-                batch.push((seq_str, seq_name.clone()));
-            } else {
-                batch.push((seq_str, class_name.clone()));
-            }
-            if batch.len() >= batch_size {
-                let variants_kmers = variants_kmers.clone();
-                let tx = tx.clone();
-                let batch_clone = batch.clone();
-                batch.clear();
-                pool.spawn(move || {
-                    // let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
-                    for (seq, seq_class) in batch_clone {
-                        let mut hm: FxHashMap<String, u32> = FxHashMap::default();
-                        let mut kmer_hm: FxHashMap<String, Value> = FxHashMap::default();
-                        let end = seq.chars().count() - k + step;
-                        let mut index = 0;
-                        while index + step < end {
-                            *hm.entry(seq[index..index + k].to_owned()).or_insert(0) += 1;
-                            index += step;
-                        }
-                        for kmer in &variants_kmers {
-                            *kmer_hm.entry(kmer.to_string()).or_insert(Value::Usize(0)) =
-                                Value::Usize(*hm.get(kmer).unwrap_or(&0));
-                        }
-                        if predict_data {
-                            kmer_hm.insert("ID".to_string(), Value::Str(seq_class.clone()));
-                        } else {
-                            kmer_hm.insert("CLASS".to_string(), Value::Str(seq_class.clone()));
-                        }
-                        tx.send(kmer_hm).unwrap();
-                    }
-                });
+        if let Ok(record) = result {
+            let seq = String::from_utf8_lossy(record.seq()).to_uppercase();
+            if !contains_forbidden_chars(&seq, &dict) {
+                let id = if predict_data {
+                    record.id().to_string()
+                } else {
+                    class_name.clone()
+                };
+                sequences.push((seq.to_string(), id));
+
+                if sequences.len() >= batch_size {
+                    process_batch(&sequences, &variants_set, k, step, predict_data, tx.clone());
+                    sequences.clear();
+                }
             }
         }
     }
-    // Process any remaining sequences in the last batch
-    if !batch.is_empty() {
-        let tx = tx.clone();
-        let variants_kmers = variants_kmers.clone();
-        pool.spawn(move || {
-            // let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
-            // let variants_kmers = variants_kmers.clone();
-            for (seq, seq_class) in batch {
-                let mut hm: FxHashMap<String, u32> = FxHashMap::default();
-                let mut kmer_hm: FxHashMap<String, Value> = FxHashMap::default();
-                let end = seq.chars().count() - k + step;
-                let mut index = 0;
-                while index + step < end {
-                    *hm.entry(seq[index..index + k].to_owned()).or_insert(0) += 1;
-                    index += step;
-                }
-                for kmer in &variants_kmers {
-                    *kmer_hm.entry(kmer.to_string()).or_insert(Value::Usize(0)) =
-                        Value::Usize(*hm.get(kmer).unwrap_or(&0));
-                }
-                if predict_data {
-                    kmer_hm.insert("ID".to_string(), Value::Str(seq_class.clone()));
-                } else {
-                    kmer_hm.insert("CLASS".to_string(), Value::Str(seq_class.clone()));
-                }
-                tx.send(kmer_hm).unwrap();
-            }
-        });
+
+    // Process remaining sequences
+    if !sequences.is_empty() {
+        process_batch(&sequences, &variants_set, k, step, predict_data, tx.clone());
     }
 
-    drop(tx); // Close all senders
+    drop(tx);
+    rx.iter().collect()
+}
 
-    let samples = rx.iter().collect::<Vec<FxHashMap<String, Value>>>();
+#[inline]
+fn process_batch(
+    sequences: &[(String, String)],
+    variants_set: &HashSet<String>,
+    k: usize,
+    step: usize,
+    predict_data: bool,
+    tx: std::sync::mpsc::Sender<FxHashMap<String, Value>>,
+) {
+    sequences.par_iter().for_each(|(seq, id)| {
+        let kmer_counts = count_kmers(seq, k, step);
+        let mut result_map = FxHashMap::default();
 
-    samples
+        // Pre-allocate with capacity
+        result_map.reserve(variants_set.len() + 1);
+
+        // Fill in k-mer counts
+        for variant in variants_set.iter() {
+            result_map.insert(
+                variant.clone(),
+                Value::Usize(kmer_counts.get(variant).copied().unwrap_or(0)),
+            );
+        }
+
+        // Add classification/ID
+        let key = if predict_data { "ID" } else { "CLASS" };
+        result_map.insert(key.to_string(), Value::Str(id.clone()));
+
+        tx.send(result_map).unwrap();
+    });
+}
+
+#[inline]
+fn count_kmers(seq: &str, k: usize, step: usize) -> FxHashMap<String, u32> {
+    let end = seq.len() - k + 1;
+    let mut counts = FxHashMap::default();
+
+    // Pre-allocate with estimated capacity
+    counts.reserve(end / step);
+
+    seq.as_bytes()
+        .windows(k)
+        .step_by(step)
+        .take(end)
+        .for_each(|window| {
+            *counts
+                .entry(String::from_utf8_lossy(window).into_owned())
+                .or_insert(0) += 1;
+        });
+
+    counts
 }
 
 /// Computes the intersection of k-mer sets.
@@ -433,6 +601,7 @@ fn get_set_intersection(
 /// assert_eq!(entropy, 2.0);
 /// ```
 ///
+#[inline]
 fn entropy(probs: &[f64]) -> f64 {
     probs
         .iter()
@@ -526,6 +695,84 @@ fn max_entropy(kmers: &FxHashMap<String, u32>) -> u32 {
     frequency
 }
 
+fn max_entropy_positions(positions: &[u64]) -> u64 {
+    let mut sorted_positions = positions.to_vec();
+    sorted_positions.sort_by(|a, b| b.cmp(a));
+
+    let total: u64 = sorted_positions.iter().sum();
+    if total == 0 {
+        return 0;
+    }
+
+    let normalized_data: Vec<f64> = sorted_positions
+        .iter()
+        .map(|&x| x as f64 / total as f64)
+        .collect();
+
+    let entropy_curve: Vec<f64> = (1..normalized_data.len())
+        .into_par_iter()
+        .map(|s| {
+            // Region A: probs[:s]
+            let p_a: f64 = normalized_data[..s].iter().sum();
+            let h_a = if p_a > 0.0 {
+                let p_a_data: Vec<f64> = normalized_data[..s]
+                    .iter()
+                    .map(|&x| x as f64 / p_a as f64)
+                    .collect();
+                entropy(&p_a_data)
+            } else {
+                0.0
+            };
+            // Region B: probs[s:]
+            let p_b: f64 = normalized_data[s..].iter().sum();
+            let h_b = if p_b > 0.0 {
+                let p_b_data: Vec<f64> = normalized_data[s..]
+                    .iter()
+                    .map(|&x| x as f64 / p_b as f64)
+                    .collect();
+                entropy(&p_b_data)
+            } else {
+                0.0
+            };
+            h_a + h_b
+        })
+        .collect();
+
+    let (_max_entropy, max_entropy_idx) =
+        entropy_curve
+            .iter()
+            .enumerate()
+            .fold((f64::MIN, 0), |(max_val, max_idx), (idx, &val)| {
+                if val > max_val {
+                    (val, idx)
+                } else {
+                    (max_val, max_idx)
+                }
+            });
+
+    sorted_positions[max_entropy_idx]
+}
+
+fn process_positions(
+    selected_kmers: &FxHashMap<String, u32>,
+    hm_positions: &FxHashMap<String, Vec<u64>>,
+) -> FxHashMap<String, Vec<u8>> {
+    let mut result: FxHashMap<String, Vec<u8>> = FxHashMap::default();
+
+    for kmer in selected_kmers.keys() {
+        if let Some(pos_dist) = hm_positions.get(kmer) {
+            let threshold = max_entropy_positions(pos_dist);
+            let binary_positions: Vec<u8> = pos_dist
+                .iter()
+                .map(|&count| if count >= threshold { 1 } else { 0 })
+                .collect();
+            result.insert(kmer.clone(), binary_positions);
+        }
+    }
+
+    result
+}
+
 /// Selects k-mers with frequencies above a given threshold.
 ///
 /// This function filters a map of k-mers by selecting only those with frequencies
@@ -559,7 +806,8 @@ fn max_entropy(kmers: &FxHashMap<String, u32>) -> u32 {
 /// assert_eq!(selected_kmers.get("ACGA"), Some(&1));
 /// ```
 ///
-fn select_kmers(kmers: FxHashMap<String, u32>, threshold: u32) -> FxHashMap<String, u32> {
+#[inline]
+fn select_kmers(kmers: &FxHashMap<String, u32>, threshold: u32) -> FxHashMap<String, u32> {
     let mut selected_kmers: FxHashMap<String, u32> = FxHashMap::default();
     for (key, value) in kmers.iter() {
         if value >= &threshold {
@@ -608,10 +856,60 @@ fn select_kmers(kmers: FxHashMap<String, u32>, threshold: u32) -> FxHashMap<Stri
 /// assert_eq!(mutations, vec![]);
 /// ```
 ///
+// fn process_sequence(
+//     seq: &str,
+//     ref_seq_str: &Arc<String>,
+//     exclusive_kmers_set: &Arc<HashSet<String>>,
+//     k: usize,
+//     step: usize,
+//     max_dist: usize,
+//     ref_end: usize,
+// ) -> Vec<String> {
+//     let splitted_seq: HashSet<String> = split_seq(seq, k, step).into_iter().collect();
+//     let var_kmers: Vec<&String> = exclusive_kmers_set.intersection(&splitted_seq).collect();
+
+//     let _sp = Spinner::new(Spinners::GrowVertical, String::new());
+
+//     var_kmers
+//         .into_par_iter()
+//         .flat_map(|var_kmer| {
+//             let pattern = var_kmer.as_bytes();
+//             (0..ref_end)
+//                 .into_par_iter()
+//                 .step_by(step)
+//                 .filter_map(move |mutation_index| {
+//                     let ref_kmer = &ref_seq_str[mutation_index..mutation_index + k].as_bytes();
+//                     if levenshtein(pattern, ref_kmer) <= max_dist.try_into().unwrap() {
+//                         let ref_seq_kmer = &ref_seq_str[mutation_index..mutation_index + k];
+//                         Some(
+//                             get_kmer_mutation_index(pattern, ref_kmer, max_dist)
+//                                 .into_par_iter()
+//                                 .map(move |(snp, ind)| {
+//                                     concat_string!(
+//                                         (mutation_index + 1 + ind).to_string(),
+//                                         ":",
+//                                         snp,
+//                                         ":",
+//                                         ref_seq_kmer,
+//                                         ":",
+//                                         var_kmer
+//                                     )
+//                                 }),
+//                         )
+//                     } else {
+//                         None
+//                     }
+//                 })
+//                 .flat_map(|x| x)
+//         })
+//         .collect()
+// }
+
 fn process_sequence(
     seq: &str,
     ref_seq_str: &Arc<String>,
     exclusive_kmers_set: &Arc<HashSet<String>>,
+    final_positions: &FxHashMap<String, Vec<u8>>,
     k: usize,
     step: usize,
     max_dist: usize,
@@ -625,36 +923,70 @@ fn process_sequence(
     var_kmers
         .into_par_iter()
         .flat_map(|var_kmer| {
+            // Get position vector for this kmer
+            let positions = match final_positions.get(var_kmer) {
+                Some(pos) => pos,
+                None => return Vec::new(),
+            };
+
+            // Get search ranges based on positions
+            let search_ranges = get_search_ranges(positions, ref_end, seq.len());
+
             let pattern = var_kmer.as_bytes();
-            (0..ref_end)
+
+            search_ranges
                 .into_par_iter()
-                .step_by(step)
-                .filter_map(move |mutation_index| {
-                    let ref_kmer = &ref_seq_str[mutation_index..mutation_index + k].as_bytes();
-                    if levenshtein(pattern, ref_kmer) <= max_dist.try_into().unwrap() {
-                        let ref_seq_kmer = &ref_seq_str[mutation_index..mutation_index + k];
-                        Some(
-                            get_kmer_mutation_index(pattern, ref_kmer, max_dist)
-                                .into_par_iter()
-                                .map(move |(snp, ind)| {
-                                    concat_string!(
-                                        (mutation_index + 1 + ind).to_string(),
-                                        ":",
-                                        snp,
-                                        ":",
-                                        ref_seq_kmer,
-                                        ":",
-                                        var_kmer
+                .flat_map(move |range| {
+                    (range.start..range.end)
+                        .into_par_iter()
+                        .step_by(step)
+                        .filter_map(move |mutation_index| {
+                            if mutation_index + k <= ref_seq_str.len() {
+                                let ref_kmer =
+                                    &ref_seq_str[mutation_index..mutation_index + k].as_bytes();
+                                if levenshtein(pattern, ref_kmer) <= max_dist.try_into().unwrap() {
+                                    let ref_seq_kmer =
+                                        &ref_seq_str[mutation_index..mutation_index + k];
+                                    Some(
+                                        get_kmer_mutation_index(pattern, ref_kmer, max_dist)
+                                            .into_par_iter()
+                                            .map(move |(snp, ind)| {
+                                                concat_string!(
+                                                    (mutation_index + 1 + ind).to_string(),
+                                                    ":",
+                                                    snp,
+                                                    ":",
+                                                    ref_seq_kmer,
+                                                    ":",
+                                                    var_kmer
+                                                )
+                                            }),
                                     )
-                                }),
-                        )
-                    } else {
-                        None
-                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .flat_map(|x| x)
                 })
-                .flat_map(|x| x)
+                .collect::<Vec<_>>()
         })
         .collect()
+}
+
+fn get_interval_index(value: f64) -> usize {
+    if value < 0.0 || value > 1.0 {
+        panic!("Value must be between 0 and 1");
+    }
+    let interval_size = 1.0 / 100.0;
+    let index = (value / interval_size).floor() as usize;
+    if index >= 100 {
+        99
+    } else {
+        index
+    }
 }
 
 /// Get the kmers from a sequence file
@@ -697,7 +1029,7 @@ fn get_kmers_impl(
     dict: String,
     reference: bool,
     batch_size: usize,
-) -> Result<FxHashMap<String, u32>> {
+) -> Result<FxHashMap<String, Vec<u8>>> {
     let _sp = Spinner::new(Spinners::GrowVertical, String::new());
     let reader = fasta::Reader::from_file(seq_path)?;
     let dict = Arc::new(dict);
@@ -715,38 +1047,56 @@ fn get_kmers_impl(
         })
         .collect();
 
-    let hm: FxHashMap<String, u32> = sequences
+    // Create tuple of hashmaps for frequencies and positions
+    let (hm, hm_positions): (FxHashMap<String, u32>, FxHashMap<String, Vec<u64>>) = sequences
         .par_chunks(batch_size)
         .map(|batch| {
             let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
+            let mut batch_positions: FxHashMap<String, Vec<u64>> = FxHashMap::default();
+
             for seq in batch {
                 let end = seq.len() - k + 1;
                 for index in (0..end).step_by(step) {
-                    *batch_hm
-                        .entry(seq[index..index + k].to_string())
-                        .or_insert(0) += 1;
+                    let kmer = seq[index..index + k].to_string();
+
+                    // Update frequency count
+                    *batch_hm.entry(kmer.clone()).or_insert(0) += 1;
+
+                    // Update position distribution
+                    let relative_pos = index as f64 / end as f64;
+                    let bin_index = get_interval_index(relative_pos);
+                    let pos_vec = batch_positions.entry(kmer).or_insert_with(|| vec![0; 100]);
+                    pos_vec[bin_index] += 1;
                 }
             }
-            batch_hm
+            (batch_hm, batch_positions)
         })
         .reduce(
-            || FxHashMap::default(),
+            || (FxHashMap::default(), FxHashMap::default()),
             |mut acc, other| {
-                for (key, value) in other {
-                    *acc.entry(key).or_insert(0) += value;
+                // Merge frequency counts
+                for (key, value) in other.0 {
+                    *acc.0.entry(key).or_insert(0) += value;
+                }
+
+                // Merge position distributions
+                for (key, pos_vec) in other.1 {
+                    let acc_vec = acc.1.entry(key).or_insert_with(|| vec![0; 100]);
+                    for (i, &count) in pos_vec.iter().enumerate() {
+                        acc_vec[i] += count;
+                    }
                 }
                 acc
             },
         );
 
-    let selected_kmers = if reference {
-        select_kmers(hm, 0)
-    } else {
-        let threshold = max_entropy(&hm);
-        select_kmers(hm, threshold)
-    };
+    let threshold = if reference { 0 } else { max_entropy(&hm) };
+    let selected_kmers = select_kmers(&hm, threshold);
 
-    Ok(selected_kmers)
+    // Process positions for selected kmers
+    let final_positions = process_positions(&selected_kmers, &hm_positions);
+
+    Ok(final_positions)
 }
 
 #[pyfunction]
@@ -870,11 +1220,85 @@ fn get_freq_kmers(diffs: FxHashMap<String, Vec<String>>) -> Py<PyAny> {
     return Python::with_gil(|py| (freqs, var_list).to_object(py));
 }
 
+// #[pyfunction]
+// fn kmers_analysis(
+//     seq_path: String,
+//     ref_path: String,
+//     exclusive_kmers: Vec<String>,
+//     k: usize,
+//     step: usize,
+//     max_dist: usize,
+//     batch_size: usize,
+// ) -> PyResult<Py<PyAny>> {
+//     Python::with_gil(|py| {
+//         // Load reference sequence
+//         let ref_reader = fasta::Reader::from_file(&ref_path)
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?
+//             .records()
+//             .next()
+//             .ok_or_else(|| {
+//                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Reference sequence not found")
+//             })?
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+//         let ref_seq_str = Arc::new(
+//             String::from_utf8(ref_reader.seq().to_owned())
+//                 .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?
+//                 .to_uppercase(),
+//         );
+//         let ref_end = ref_seq_str.chars().count() - k + step;
+
+//         let exclusive_kmers_set: Arc<HashSet<String>> =
+//             Arc::new(exclusive_kmers.into_iter().collect());
+
+//         // Create a vector for reading sequences
+//         let sequences = fasta::Reader::from_file(&seq_path)
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?
+//             .records()
+//             .map(|r| {
+//                 r.map(|record| {
+//                     (
+//                         String::from_utf8(record.seq().to_owned())
+//                             .unwrap()
+//                             .to_uppercase(),
+//                         record.id().to_string(),
+//                     )
+//                 })
+//             })
+//             .collect::<Result<Vec<_>, _>>()
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+//         // Process sequences in batches, using parallel processing
+//         let variations_positions: FxHashMap<String, Vec<String>> = sequences
+//             .par_chunks(batch_size)
+//             .flat_map(|batch| {
+//                 batch
+//                     .par_iter()
+//                     .map(|(seq, seq_name)| {
+//                         let variations = process_sequence(
+//                             seq,
+//                             &ref_seq_str,
+//                             &exclusive_kmers_set,
+//                             k,
+//                             step,
+//                             max_dist,
+//                             ref_end,
+//                         );
+//                         (seq_name.clone(), variations)
+//                     })
+//                     .collect::<Vec<_>>()
+//             })
+//             .collect();
+
+//         Ok(variations_positions.to_object(py))
+//     })
+// }
+
 #[pyfunction]
 fn kmers_analysis(
     seq_path: String,
     ref_path: String,
     exclusive_kmers: Vec<String>,
+    final_positions: FxHashMap<String, Vec<u8>>,
     k: usize,
     step: usize,
     max_dist: usize,
@@ -928,6 +1352,7 @@ fn kmers_analysis(
                             seq,
                             &ref_seq_str,
                             &exclusive_kmers_set,
+                            &final_positions,
                             k,
                             step,
                             max_dist,
@@ -954,7 +1379,7 @@ fn get_kmers(
 ) -> PyResult<Py<PyAny>> {
     let result = get_kmers_impl(seq_path, k, step, dict, reference, batch_size);
     match result {
-        Ok(selected_kmers) => Python::with_gil(|py| Ok(selected_kmers.to_object(py))),
+        Ok(final_positions) => Python::with_gil(|py| Ok(final_positions.to_object(py))),
         Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
             e.to_string(),
         )),

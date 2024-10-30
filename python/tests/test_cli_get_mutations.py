@@ -56,75 +56,6 @@ def test_get_mutations_with_report_and_kmers(variant, caplog):
             '-s',
             '1',
             '--create-report',
-            '--save-kmers',
-        ],
-    )
-    assert result.exit_code == 0
-    assert 'Done!' in caplog.text
-
-
-def test_phylogenic(caplog):
-    result = runner.invoke(
-        app,
-        [
-            'phylogenetic',
-            '--save-path',
-            SAVE_PATH,
-        ],
-    )
-    assert result.exit_code == 0
-    assert 'Done!' in caplog.text
-
-
-def test_phylogenic_with_heatmap(caplog):
-    result = runner.invoke(
-        app,
-        [
-            'phylogenetic',
-            '--save-path',
-            SAVE_PATH,
-            '--save-heatmap',
-        ],
-    )
-    assert result.exit_code == 0
-    assert 'Done!' in caplog.text
-
-
-def test_phylogenetic_from_configfile(caplog):
-    result = runner.invoke(
-        app,
-        [
-            'from-configfile',
-            '--objective',
-            'phylogenic',
-            '--config-file',
-            'data/parameters.ini',
-        ],
-    )
-    assert result.exit_code == 0
-    assert 'Done!' in caplog.text
-
-
-def test_get_mutations_with_txt_kmers_file(caplog):
-    result = runner.invoke(
-        app,
-        [
-            'get-mutations',
-            '--rpath',
-            REF_PATH,
-            '--spath',
-            SEQ_PATH + 'Alpha.fasta',
-            '--apath',
-            ANNOT_PATH,
-            '--save-path',
-            SAVE_PATH,
-            '-w',
-            '10',
-            '-s',
-            '1',
-            '--load-exclusive-kmers',
-            '--exclusive-kmers',
-            'data/alpha_kmers.txt',
         ],
     )
     assert result.exit_code == 0
@@ -194,7 +125,6 @@ def test_get_mutations_complete(variant, caplog):
             '-d',
             'DNA',
             '--create-report',
-            '--save-kmers',
         ],
     )
     assert result.exit_code == 0
@@ -218,7 +148,6 @@ def test_get_mutations_error_no_kmers(caplog):
             '3',
             '-s',
             '1',
-            '--save-kmers',
         ],
     )
     assert result.exit_code == 1
@@ -240,48 +169,11 @@ def test_get_mutations_error_no_kmers_no_annotation(caplog):
             '3',
             '-s',
             '1',
-            '--save-kmers',
             '--create-report',
         ],
     )
     assert result.exit_code == 1
     assert 'No exclusive kmers were identified.' in caplog.text
-
-
-@mark.parametrize(
-    'file, variant',
-    [
-        (['Alpha.fasta', 'Alpha']),
-        (['Beta.fasta', 'Beta']),
-        (['Delta.fasta', 'Delta']),
-        (['Gamma.fasta', 'Gamma']),
-    ],
-)
-def test_get_mutations_load_kmers(file, variant, caplog):
-    result = runner.invoke(
-        app,
-        [
-            'get-mutations',
-            '--rpath',
-            REF_PATH,
-            '--spath',
-            SEQ_PATH + file,
-            '--apath',
-            ANNOT_PATH,
-            '--save-path',
-            SAVE_PATH,
-            '-w',
-            '10',
-            '-s',
-            '1',
-            '--create-report',
-            '--load-exclusive-kmers',
-            '--exclusive-kmers',
-            SAVE_PATH + variant + '/' + variant + '_ExclusiveKmers.sav',
-        ],
-    )
-    assert result.exit_code == 0
-    assert 'Done!' in caplog.text
 
 
 def test_get_intersection_default(caplog):
@@ -347,6 +239,8 @@ def test_get_only_kmers(caplog):
             '10',
             '-s',
             '1',
+            '--save-path',
+            SAVE_PATH,
         ],
     )
     assert result.exit_code == 0

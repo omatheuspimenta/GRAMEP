@@ -76,26 +76,6 @@ class Messages:
             string,
         )
 
-    def info_newick_saved(self, string):
-        """Messages.
-
-        Newick file saved in %s folder
-        """
-        log_text.info(
-            ':white_check_mark::file_folder: Newick file saved in %s folder',
-            string,
-        )
-
-    def info_phylogenic_tree_saved(self, string):
-        """Messages.
-
-        Phylogenic tree saved in %s folder
-        """
-        log_text.info(
-            ':white_check_mark::evergreen_tree: Phylogenic tree saved in %s folder',
-            string,
-        )
-
     def info_report_saved(self, string):
         """Messages.
 
@@ -155,13 +135,6 @@ class Messages:
             string,
         )
 
-    # def info_loading(self, string):
-    #     """Messages.
-
-    #     Loading
-    #     """
-    #     log_text.info(':hourglass: Loading... %s', string)
-
     def info_loading_kmers(self):
         """Messages.
 
@@ -190,21 +163,19 @@ class Messages:
         """
         log_text.info(':mag: Found %s exclusive kmers', string)
 
+    def info_founded_features(self, string):
+        """Messages.
+
+        Founded exclusive kmers
+        """
+        log_text.info(':mag: Found %s features', string)
+
     def info_kmers_load(self):
         """Messages.
 
         kmers file loaded
         """
         log_text.info(':white_check_mark::open_file_folder: kmers file loaded')
-
-    # def info_intersections_load(self):
-    #     """Messages.
-
-    #     Intersections file loaded
-    #     """
-    #     log_text.info(
-    #         ':white_check_mark::open_file_folder: Intersections file loaded'
-    #     )
 
     def info_get_kmers(self):
         """Messages.
@@ -295,30 +266,6 @@ class Messages:
             ':red_square::blue_square:Confusion matrix saved in %s folder',
             string,
         )
-
-    def info_creating_heatmap(self):
-        """Messages.
-
-        Creating heatmap
-        """
-        log_text.info('[cyan]Creating heatmap ...')
-
-    def result_heatmap(self, string):
-        """Messages.
-
-        Heatmap saved in folder
-        """
-        log_text.info(
-            ':fire::world_map: Heatmap saved in %s folder',
-            string,
-        )
-
-    def info_creating_distance_linkage(self):
-        """Messages.
-
-        Creating distance and linkage
-        """
-        log_text.info('[cyan] Creating distance matrix and linkage ...')
 
     def info_selected_parameters(self, word, step):
         """Messages.

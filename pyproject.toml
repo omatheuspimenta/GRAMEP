@@ -4,15 +4,15 @@ build-backend = "maturin"
 
 [project]
 name = "gramep"
-version = "1.0.9"
+version = "1.1.0"
 requires-python = ">=3.12"
 description = "GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle"
 authors = [
-    { name="Matheus Pimenta", email="matheus.pimenta@outlook.com"},
+    { name="Matheus Pimenta", email="omatheuspimenta@outlook.com"},
     { name="Fabricio Lopes", email="fabricio@utfpr.edu.br"},
     ]
 maintainers = [
-    { name="Matheus Pimenta", email="matheus.pimenta@outlook.com"},
+    { name="Matheus Pimenta", email="omatheuspimenta@outlook.com"},
 ]
 readme = "README.md"
 license = {text = "MIT License"}
@@ -40,8 +40,6 @@ dependencies = [
     "upsetplot >=0.9.0",
     "scikit-learn >=1.5.1",
     "seaborn >=0.13.2",
-    "polars >=1.5.0",
-    "toytree >=3.0.5",
     "thefuzz >=0.22.1",
 ]
 

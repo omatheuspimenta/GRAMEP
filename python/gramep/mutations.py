@@ -16,7 +16,6 @@ from sys import exit
 from gramep.analysis import mutations_analysis, variants_analysis
 from gramep.data_io import (
     annotation_dataframe,
-    load_exclusive_kmers_file,
     load_sequences,
     save_diffs_positions,
     save_exclusive_kmers,
@@ -45,9 +44,6 @@ def get_mutations(
     snps_max: int = 1,
     dictonary: str = 'DNA',
     create_report: bool = False,
-    save_kmers: bool = False,
-    load_exclusive_kmers: bool = False,
-    path_exclusive_kmers: str | None = None,
     chunk_size: int = 100,
 ):
     """
@@ -69,11 +65,6 @@ def get_mutations(
         dictonary (str, optional): The DNA dictionary for k-mer analysis. \
         Default is 'DNA'.
         create_report (bool, optional): Whether to create a report. Default is False.
-        save_kmers (bool, optional): Whether to save k-mers to a file. Default is False.
-        load_exclusive_kmers (bool, optional): Whether to load exclusive k-mers \
-        from a file. Default is False.
-        path_exclusive_kmers (str | None, optional): The path to the exclusive \
-        k-mers file. Default is None.
         chunk_size (int, optional): The chunk size for loading sequences. \
         Default is 100.
 
@@ -94,45 +85,38 @@ def get_mutations(
             message.warning_annotation_file()
             annotation_df, sequence_interval = None, None
 
-    # Load exclusive kmers
-    if load_exclusive_kmers:
-        seq_kmers_exclusive = load_exclusive_kmers_file(
-            path_exclusive_kmers=path_exclusive_kmers
-        )
-        message.info_kmers_load()
-    else:
-        seq_kmers = load_sequences(
-            file_path=sequence_path,
-            word=word,
-            step=step,
-            dictonary=dictonary,
-            reference=False,
-            chunk_size=chunk_size,
-        )
-        ref_kmers = load_sequences(
-            file_path=reference_path,
-            word=word,
-            step=step,
-            dictonary=dictonary,
-            reference=True,
-            chunk_size=chunk_size,
-        )
+    seq_kmers = load_sequences(
+        file_path=sequence_path,
+        word=word,
+        step=step,
+        dictonary=dictonary,
+        reference=False,
+        chunk_size=chunk_size,
+    )
+    ref_kmers = load_sequences(
+        file_path=reference_path,
+        word=word,
+        step=step,
+        dictonary=dictonary,
+        reference=True,
+        chunk_size=chunk_size,
+    )
 
-        seq_kmers_exclusive = kmers_difference(seq_kmers, ref_kmers)
-        seq_kmers_intersections = kmers_intersections(seq_kmers, ref_kmers)
+    seq_kmers_exclusive = kmers_difference(seq_kmers, ref_kmers)
+    seq_kmers_intersections = kmers_intersections(seq_kmers, ref_kmers)
 
-        if save_kmers:
-            save_exclusive_kmers(
-                sequence_path=sequence_path,
-                seq_kmers_exclusive=seq_kmers_exclusive,
-                save_path=save_path,
-            )
-            save_intersection_kmers(
-                sequence_path=sequence_path,
-                seq_kmers_intersections=seq_kmers_intersections,
-                save_path=save_path,
-            )
+    save_exclusive_kmers(
+        sequence_path=sequence_path,
+        seq_kmers_exclusive=seq_kmers_exclusive,
+        save_path=save_path,
+    )
+    save_intersection_kmers(
+        sequence_path=sequence_path,
+        seq_kmers_intersections=seq_kmers_intersections,
+        save_path=save_path,
+    )
 
+    del ref_kmers
     # Analize kmers
     message.info_founded_exclusive_kmers(len(seq_kmers_exclusive))
     message.info_get_kmers()
@@ -142,6 +126,7 @@ def get_mutations(
         seq_path=sequence_path,
         ref_path=reference_path,
         seq_kmers_exclusive=seq_kmers_exclusive,
+        kmers_positions=seq_kmers,
         word=word,
         step=step,
         snps_max=snps_max,
@@ -167,13 +152,12 @@ def get_mutations(
 
     freq_kmers, variations = get_freq_kmers(diffs_positions)
 
-    if save_kmers:
-        save_diffs_positions(
-            sequence_path=sequence_path,
-            ref_path=reference_path,
-            variations=variations,
-            save_path=save_path,
-        )
+    save_diffs_positions(
+        sequence_path=sequence_path,
+        ref_path=reference_path,
+        variations=variations,
+        save_path=save_path,
+    )
 
     if create_report:
         write_report(
@@ -203,9 +187,8 @@ def get_only_kmers(
     sequence_path: str,
     word: int,
     step: int,
+    save_path: str,
     dictonary: str = 'DNA',
-    save_kmers: bool = False,
-    save_path: str | None = None,
     chunk_size: int = 100,
 ) -> list[str]:
     """
@@ -221,7 +204,6 @@ def get_only_kmers(
         step (int): The step size for moving the sliding window.
         dictonary (str, optional): The DNA dictionary for k-mer analysis. \
         Default is 'DNA'.
-        save_kmers (bool, optional): Whether to save k-mers to a file. Default is False.
         save_path (str|None, optional): The path to save the generated results. Default is None.
         chunk_size (int, optional): The chunk size for loading sequences. \
         Default is 100.
@@ -250,12 +232,11 @@ def get_only_kmers(
     seq_kmers_exclusive = kmers_difference(seq_kmers, ref_kmers)
     message.info_founded_exclusive_kmers(len(seq_kmers_exclusive))
 
-    if save_kmers:
-        save_exclusive_kmers(
-            sequence_path=sequence_path,
-            seq_kmers_exclusive=seq_kmers_exclusive,
-            save_path=save_path,
-        )
+    save_exclusive_kmers(
+        sequence_path=sequence_path,
+        seq_kmers_exclusive=seq_kmers_exclusive,
+        save_path=save_path,
+    )
     message.info_done()
 
     return seq_kmers_exclusive

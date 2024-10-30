@@ -8,7 +8,6 @@ from gramep.mutations import get_only_kmers as _get_only_kmers
 from gramep.mutations import (
     get_variants_intersection as _get_variants_intersection,
 )
-from gramep.phylogenics import get_phylogenic as _get_phylogenic
 from rich.console import Console
 from typer import Context, Exit, Option, Typer
 from typing_extensions import Annotated
@@ -94,24 +93,6 @@ def get_mutations(
     create_report: Annotated[
         bool, Option('--create-report', help=':clipboard: Create report.')
     ] = False,
-    save_kmers: Annotated[
-        bool,
-        Option('--save-kmers', help=':floppy_disk: Save exclusive k-mers.'),
-    ] = False,
-    load_exclusive_kmers: Annotated[
-        bool,
-        Option(
-            '--load-exclusive-kmers',
-            help=':open_file_folder: Load exclusive k-mers.',
-        ),
-    ] = False,
-    path_exclusive_kmers: Annotated[
-        str,
-        Option(
-            '--exclusive-kmers',
-            help=':open_file_folder: Path to exclusive k-mers, in .sav format or plain text with one k-mer per line.',
-        ),
-    ] = None,
     chunk_size: Annotated[
         int,
         Option(
@@ -133,9 +114,6 @@ def get_mutations(
         snps_max=snps_max,
         dictonary=dictonary,
         create_report=create_report,
-        save_kmers=save_kmers,
-        load_exclusive_kmers=load_exclusive_kmers,
-        path_exclusive_kmers=path_exclusive_kmers,
         chunk_size=chunk_size,
     )
 
@@ -157,6 +135,10 @@ def get_only_kmers(
     step: Annotated[
         int, Option('--step', '-s', help=':next_track_button: Step size.')
     ],
+    save_path: Annotated[
+        str,
+        Option('--save-path', help=':open_file_folder: Path to save results.'),
+    ],
     dictonary: Annotated[
         str,
         Option(
@@ -166,14 +148,6 @@ def get_only_kmers(
             shell_complete=complete_dicts,
         ),
     ] = 'DNA',
-    save_kmers: Annotated[
-        bool,
-        Option('--save-kmers', help=':floppy_disk: Save exclusive k-mers.'),
-    ] = False,
-    save_path: Annotated[
-        str,
-        Option('--save-path', help=':open_file_folder: Path to save results.'),
-    ] = None,
     chunk_size: Annotated[
         int,
         Option(
@@ -190,9 +164,8 @@ def get_only_kmers(
         sequence_path=sequence_path,
         word=word,
         step=step,
-        dictonary=dictonary,
-        save_kmers=save_kmers,
         save_path=save_path,
+        dictonary=dictonary,
         chunk_size=chunk_size,
     )
 
@@ -243,7 +216,7 @@ def classify(
             help=':open_file_folder: Path to directory containing variants.',
         ),
     ],
-    should_get_kmers: Annotated[
+    get_kmers: Annotated[
         bool,
         Option(
             '--should-get-kmers',
@@ -267,27 +240,6 @@ def classify(
             shell_complete=complete_dicts,
         ),
     ] = 'DNA',
-    should_save_data: Annotated[
-        bool,
-        Option(
-            '--should-save-data',
-            help=':floppy_disk: Save data used for classification.',
-        ),
-    ] = True,
-    should_save_model: Annotated[
-        bool,
-        Option(
-            '--should-save-model',
-            help=':floppy_disk::robot: Save model used for classification.',
-        ),
-    ] = True,
-    should_save_confusion_matrix: Annotated[
-        bool,
-        Option(
-            '--should-save-confusion-matrix',
-            help=':floppy_disk::abacus: Save confusion matrix.',
-        ),
-    ] = True,
     chunk_size: Annotated[
         int,
         Option(
@@ -304,12 +256,9 @@ def classify(
         step=step,
         save_path=save_path,
         dir_path=dir_path,
-        should_get_kmers=should_get_kmers,
+        get_kmers=get_kmers,
         reference_path=reference_path,
         dictonary=dictonary,
-        should_save_data=should_save_data,
-        should_save_model=should_save_model,
-        should_save_confusion_matrix=should_save_confusion_matrix,
         chunk_size=chunk_size,
     )
 
@@ -476,26 +425,3 @@ def grid_search(
         max_step=max_step,
         dictonary=dictonary,
     )
-
-
-@app.command()
-def phylogenetic(
-    save_path: Annotated[
-        str,
-        Option(
-            '--save-path',
-            help=':open_file_folder: Folder where the results of the analyses performed by the get-mutations command are saved.',
-        ),
-    ],
-    save_heatmap: Annotated[
-        bool,
-        Option(
-            '--save-heatmap',
-            help=':floppy_disk::thermometer::input_numbers: Save heatmap of the distance matrix.',
-        ),
-    ] = False,
-):
-    """
-    Perform phylogenetic analysis.
-    """
-    _get_phylogenic(save_path=save_path, save_heatmap=save_heatmap)
