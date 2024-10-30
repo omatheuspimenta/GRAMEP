@@ -18,7 +18,6 @@ GRAMEP is a multi-purpose Command Line Interface (CLI) software for genomics ana
 `predict`: Make predictions on variants.  
 `from-configfile`: Execute GRAMEP based on configurations from a file.  
 `grid-search`: Perform grid search to suggest a value for `word` and `step` size.  
-`phylogenetic`: Perform phylogenetic analysis.  
 
 Each subcommand caters to a specific task, empowering you to customize your genomics analysis precisely to your needs. Dive into these subcommands to unlock the full potential of GRAMEP and elevate your research and analysis workflows.
 
@@ -68,8 +67,7 @@ By utilizing the previously provided downloadable data, we can proceed to run an
 --save-path tutorial_data/output/mutations/ \
 --word 10 \
 --step 1 \
---create-report \
---save-kmers</span><span data-ty>INFO     🏁 Starting getMutations method                                                                                  
+--create-report </span><span data-ty>INFO     🏁 Starting getMutations method                                                                                  
 INFO     ⌛ Loading kmers from sequences                                                                                  
 ⠙  Buffering the sequences ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50/? 0:00:01 <  
 ⠋  Buffering the sequences ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1/? 0:00:00 <  
@@ -173,50 +171,6 @@ If you only need the kmers unique to the variant, you can get them via the `get-
 
 <br></span></div>
 
-#### Execution in Cases with Pre-existing Files of Exclusive K-mers
-
-If you already possess a file containing the most informative exclusive k-mers, you can effortlessly execute the GRAMEP method by specifying during the execution call that this file will be used.
-
-!!! warning "File containing the exclusive k-mers"
-    The file containing the exclusive k-mers must either be the previously generated binary file in .sav format or a file with each k-mer on a separate line. **It is crucial to ensure that all k-mers in the file have the same size**, meaning they consist of the same number of characters.
-
-!!! note "TODO: accept different size kmers"
-    In the upcoming update, GRAMEP will offer the capability to provide k-mers of different sizes.
-
-
-In this scenario, when making the call, the `word` parameter should denote the size of the provided k-mers, and `step` should indicate the step size for the sliding window.
-
-To demonstrate this scenario, we will use a .txt file named `gamma_exclusive_kmers.txt`, which contains exclusive k-mers obtained previously. The content of this file, located in the `/tutorial_data/` folder, includes:
-
-```TEXT
-AAAAAACAAA
-ACAAACAAAC
-```
-This example serves to illustrate the method's execution when utilizing pre-existing k-mer files, in this case, from `gamma_exclusive_kmers.txt`.
-
-<div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep get-mutations --rpath tutorial_data/reference/SARS-CoV2_wuhan_refseq.fasta \
---spath tutorial_data/VOCs/Gamma.fasta \
---apath tutorial_data/reference_annotation/GCF_009858895.2_ASM985889v3_genomic.gff \
---save-path tutorial_data/output/ \
---word 10 \
---step 1 \
---create-report \
---load-exclusive-kmers \
---exclusive-kmers tutorial_data/gamma_exclusive_kmers.txt</span><span data-ty>INFO     🏁 Starting getMutations method                                                                                  
-INFO     ⌛ Loading kmers from sequences                                                                                  
-⠙  Buffering the sequences ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50/? 0:00:01 <  
-⠋  Buffering the sequences ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1/? 0:00:00 <  
-INFO     ✅📂 kmers file loaded                                                                                           
-INFO     🔎 Getting information about exclusive kmers...                                                                  
-  100% Getting SNPs positions ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50/50 0:00:00 < 0:00:00
-  100% Creating report ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 49/49 0:00:00 < 0:00:00
-INFO     ✅📁 Report saved in tutorial_data/output//Gamma folder                                                     
-INFO     ✅📁 Frequencies saved in tutorial_data/output//Gamma folder                                                
-INFO     ✅📁 Graphic saved in tutorial_data/output/ folder                                                          
-INFO     Done! 💥🎉✨                                                                                                                                                                                                                    <br></span></div>
-
-The command output follows the same format as previously explained.
-
 ### Identifying Shared Mutations Between Variants with `get-intersection`
 
 Once you have executed the `get-mutations` command for multiple variants, you might want to determine which mutations are common among these analyzed variants. In such cases, the `get-intersection` command is employed.
@@ -267,60 +221,26 @@ Delta-Alpha: 241:CT, 8861:GC, 203:CT, 20173:GT
 Beta-Delta-Alpha: 241:CT, 8861:GC, 203:CT, 20173:GT
 ```
 
-### Getting a basic phylogeny with `phylogenetic`
-
-After extracting mutations from each variant, you can generate a phylogeny using the `phylogenetic` command. For comprehensive details on available options and usage, use the `--help` flag.
-
-<div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep phylogenetic --help</span><span data-ty>    
-Usage: gramep phylogenetic [OPTIONS]                                                                                                                                                         
-                                                                                                                                                                                              
- Perform phylogenetic analysis.                                                                                                                                                               
-                                                                                                                                                                                              
-╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --save-path           TEXT  📂 Folder where the results of the analyses performed by the get-mutations command are saved. [default: None] [required]                                    │
-│    --save-heatmap              💾🔥🗺 Save heatmap of the distance matrix.                                                                                                                  │
-│    --help                      Show this message and exit.                                                                                                                                 │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
- <br></span></div>
-
- The only required parameter is `--save-path`, which specifies the location of the mutations identified for each variant using the `get-mutations` command. Adding the `--save-heatmap` flag generates a heatmap visualization, but this option requires additional processing time and memory usage.
-
-To execute the `phylogenetic` command for the data that was previously obtained, simply enter the following command in your terminal:
-
-<div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$"> gramep phylogenetic --save-path tutorial_data/output/mutations/ </span><span data-ty>
-INFO     🏁 Starting phylogenics tree construction method ...                                                                                                                                 
-  100% Loading reports files ... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5/5 0:00:01 < 0:00:00
-INFO      Creating distance matrix and linkage ...                                                                                                                                            
-INFO     ✅📁 Newick file saved in data/output/phylogenics/ folder                                                                                              
-INFO     ✅🌲 Phylogenic tree saved in data/output/phylogenics/ folder                                                                                          
-INFO     Done! 💥🎉✨      
- <br></span></div>
-
-One file`.tree` extension containing the tree in Newick format is generated. Using the generated Newick file, you have the flexibility to style the tree with various layouts.
 
 ### Training a Classification Model with `classify`
 
 The process of training and validating a prediction model is accomplished using the `classify` command. To access additional information about this command and its options, simply include the `--help` flag when using it.
 
 <div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep classify --help</span><span data-ty>                                                                                                                           
- Usage: gramep classify [OPTIONS]                                                                                                            
+  Usage: gramep classify [OPTIONS]                                                                                                            
                                                                                                                                              
  Classify variants.                                                                                                                          
                                                                                                                                              
 ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --word                          -w          INTEGER  📏 Word size. [default: None] [required]                                          │
-│ *  --step                          -s          INTEGER  ⏭ Step size. [default: None] [required]                                           │
-│ *  --save-path                                 TEXT     📂 Path to save results. [default: None] [required]                               │
-│ *  --dir-path                      -dpath      TEXT     📂 Path to directory containing variants. [default: None] [required]              │
-│    --should-get-kmers                                   📏 Get only k-mers.                                                               │
-│    --reference-path                -rpath      TEXT     📂 Path to reference sequence. [default: None]                                    │
-│    --dictonary                     -d          TEXT     🧬📖 DNA dictionary. [default: DNA]                                               │
-│    --should-save-data                                   💾 Save data used for classification. [default: True]                             │
-│    --should-save-model                                  💾🤖 Save model used for classification. [default: True]                          │
-│    --should-save-confusion-matrix                       💾🧮 Save confusion matrix. [default: True]                                       │
-│    --chunk-size                                INTEGER  📦 Chunk size for loading sequences. [default: 100]                               │
-│    --help                                               Show this message and exit.                                                       │
+│ *  --word              -w          INTEGER  📏 Word size. [default: None] [required]                                                      │
+│ *  --step              -s          INTEGER  ⏭ Step size. [default: None] [required]                                                       │
+│ *  --save-path                     TEXT     📂 Path to save results. [default: None] [required]                                           │
+│ *  --dir-path          -dpath      TEXT     📂 Path to directory containing variants. [default: None] [required]                          │
+│    --get-kmers                       📏 Get only k-mers.                                                                           │
+│    --reference-path    -rpath      TEXT     📂 Path to reference sequence. [default: None]                                                │
+│    --dictonary         -d          TEXT     🧬📖 DNA dictionary. [default: DNA]                                                           │
+│    --chunk-size                    INTEGER  📦 Chunk size for loading sequences. [default: 100]                                           │
+│    --help                                   Show this message and exit.                                                                   │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
  <br></span></div>
@@ -330,8 +250,6 @@ The `classify` subcommand of GRAMEP is used to train classification model to cla
 The input parameters for the model are analogous to those discussed previously. The key difference lies in the use of the `--save-path` parameter, which specifies the directory containing folders with results for each variant obtained from the `get-mutations` command. 
 
 During the model training stage, feature extraction is performed using the most informative k-mers unique to each previously analyzed variant. The `dir-path` parameter specifies the directory where the sequences, used for training the model, are located. For each variant, this directory must contain a .fasta file named after the variant.
-
-Additionally, the feature matrix obtained from feature extraction for each sequence in the training dataset is automatically saved by default. If you prefer not to save this data, you can include the `--should-save-data` flag. Similarly, you can use the `--should-save-model` flag to prevent automatic saving of the trained model and the `--should-save-confusion-matrix` flag to disable automatic saving of the confusion matrix obtained during model validation. By default, all information is saved.
 
 !!! info "k-mers length"
     As of the current version, it's required that all unique most informative k-mers share the same size, and this size must be specified using the `word` parameter. However, in future updates, this restriction will be lifted, allowing the use of k-mers with different sizes. Stay tuned for these upcoming enhancements.
@@ -457,7 +375,6 @@ Here are the key groups within the configuration file:
 - `[intersection]`: The parameters required for the `get-intersection` command are contained within this group.
 - `[classify]`: For executing the `classify` command, you'll find the necessary parameters in this group.
 - `[predict]`: The `predict` command's mandatory parameters are listed within this group.
-- `[phylogenic]`: The parameters required for the `phylogenic` command are contained within this group.
 
 To illustrate this configuration structure, we provide a complete example of a configuration file. You can open the exact file from the `tutorial_data` folder.
 
@@ -466,13 +383,13 @@ This standardized format simplifies the setup process and ensures that all requi
 ```INI
 [mutations]
 # Reference path
-reference_path = tutorial_data/reference/SARS-CoV2_wuhan_refseq.fasta
+reference_path = data/reference/SARS-CoV2_wuhan_refseq.fasta
 # Sequence path
-sequence_path = tutorial_data/VOCs/Delta.fasta
+sequence_path = data/VOCs/Delta.fasta
 # Annotation path
-annotation_path = tutorial_data/reference_annotation/GCF_009858895.2_ASM985889v3_genomic.gff
+annotation_path = data/reference_annotation/GCF_009858895.2_ASM985889v3_genomic.gff
 # Save path
-save_path = tutorial_data/output/
+save_path = data/output/mutations/
 # Word size
 word = 10
 # Step size
@@ -483,18 +400,12 @@ snps_max = 1
 dictonary = ACTG
 # Create report
 create_report = True
-# Save Exclusive kmers
-save_kmers = True
-# Load Exclusive kmers
-load_exclusive_kmers = False
-# Path Exclusive kmers
-path_exclusive_kmers = None
 # Chunk size
 chunk_size = 100
 
 [intersection]
 # Save path
-save_path = tutorial_data/output/
+save_path = data/output/mutations/
 # Intersection Seletion (Use the name of the variants separated by - or 'ALL' option)
 intersection_seletion = ALL
 
@@ -504,17 +415,15 @@ word = 10
 # Step size
 step = 1
 # Save path
-save_path = tutorial_data/output/
+save_path = data/output/mutations/
 # Dir path
-dir_path = tutorial_data/VOCs/
+dir_path = data/VOCs/
+# Get kmers
+get_kmers = False
 # dictonary (ACTG/ACGU)
 dictonary = ACTG
-# Save data
-should_save_data = True
-# Save model
-should_save_model = True
-# Save confusion matrix
-should_save_confusion_matrix = True
+# Chunk size
+chunk_size = 100
 
 [predict]
 # Word size
@@ -522,23 +431,19 @@ word = 10
 # Step size
 step = 1
 # Save path
-save_path = tutorial_data/output/
+save_path = data/output/mutations/
 # Predict sequence path
-predict_seq_path = tutorial_data/VOCs/Omicron.fasta
+predict_seq_path = data/VOCs/Omicron.fasta
 # Dir path
-dir_path = tutorial_data/VOCs/
+dir_path = data/output/classify/
 # dictonary (ACTG/ACGU)
 dictonary = ACTG
 # Load ranges path
-load_ranges_path = tutorial_data/VOCs/model/ranges.sav
+load_ranges_path = data/output/classify/model/ranges.sav
 # Load model path
-load_model_path = tutorial_data/VOCs/model/model.sav
-
-[phylogenic]
-# Save path
-save_path = data/output/mutations/
-# Save model
-save_heatmap = False
+load_model_path = data/output/classify/model/model.sav
+# Chunk size
+chunk_size = 100
 ```
 
 After completing the configuration file with the necessary parameters, executing the command becomes straightforward. Simply specify the desired objective and provide the location of the configuration file when invoking the `from-configfile` command.
@@ -629,6 +534,6 @@ The values obtained through the `grid-search` are suggested values and may not b
 
 ## About this Basic usage
 
-This tutorial was authored in `December 2023`, and it's possible that the commands may receive updates in the future. To ensure you have the most current information and options, we recommend consulting the `--help` command, which is a reliable way to stay up-to-date.
+This tutorial was authored in `October 2024`, and it's possible that the commands may receive updates in the future. To ensure you have the most current information and options, we recommend consulting the `--help` command, which is a reliable way to stay up-to-date.
 
 If you come across any errors in this tutorial, please feel free to do so using the following [link](https://github.com/omatheuspimenta/GRAMEP/issues). Your contributions are greatly appreciated and help maintain the tutorial's accuracy and usefulness.

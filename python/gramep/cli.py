@@ -219,7 +219,7 @@ def classify(
     get_kmers: Annotated[
         bool,
         Option(
-            '--should-get-kmers',
+            '--get-kmers',
             help=':straight_ruler: Get only k-mers.',
         ),
     ] = False,

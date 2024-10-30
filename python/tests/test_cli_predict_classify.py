@@ -78,7 +78,7 @@ def test_classify_get_kmers(caplog):
             SAVE_PATH,
             '--dir-path',
             DIR_PATH,
-            '--should-get-kmers',
+            '--get-kmers',
             '--reference-path',
             REF_PATH,
             '--dictonary',

@@ -4,7 +4,6 @@
 **GRAMEP** is a powerful, Python-based tool designed for the precise identification of Single Nucleotide Polymorphisms (SNPs) within biological sequences.  It goes beyond basic SNP identification, offering advanced functionalities including:
 
 * **Intersection analysis:** Analyze mutations found in different variants to identify shared mutations.
-* **Phylogeny generation:** Generate a phylogenetic tree based on the exclusive mutations found for each variant.
 * **Classification model training:** Train a classification model to predict the class of new sequences.
 
 GRAMEP is accessible through a robust and intuitive Command-Line Interface (CLI). The primary command is `gramep`, with sub-commands for each action the application can perform.
@@ -61,17 +60,19 @@ This command allows you to analyze and find common mutations shared among multip
 ```
 $ gramep get-intersection --help
 
-                                                                                                                                        
-╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --save-path                              TEXT  📂 Folder where the results obtained through the get-mutations subcommand were     │
-│                                                   saved.                                                                             │
-│                                                   [default: None]                                                                    │
-│                                                   [required]                                                                         │
-│    --intersection-seletion  -selection      TEXT  ✔ Select intersection type. To specify the variants for intersection, provide them │
-│                                                   separated by '-'. For example: 'variant1-variant2-variant3'.                       │
-│                                                   [default: ALL]                                                                     │
-│    --help                                         Show this message and exit.                                                        │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ Usage: gramep get-intersection [OPTIONS]                                                                                                    
+                                                                                                                                             
+ Get intersection between variants.                                                                                                          
+                                                                                                                                             
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *  --save-path                              TEXT  📂 Folder where the results obtained through the get-mutations subcommand were saved.   │
+│                                                   [default: None]                                                                         │
+│                                                   [required]                                                                              │
+│    --intersection-seletion  -selection      TEXT  ✔ Select intersection type. To specify the variants for intersection, provide them      │
+│                                                   separated by '-'. For example: 'variant1-variant2-variant3'.                            │
+│                                                   [default: ALL]                                                                          │
+│    --help                                         Show this message and exit.                                                             │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 This will provide you with comprehensive guidance on using the `get-intersection` command effectively to identify mutation intersections between variants in your genomics analysis.
@@ -87,30 +88,6 @@ To perform the most basic analysis with the `get-intersection` command, you need
     It's important to note that performing intersection analysis between multiple variants can be computationally intensive and time-consuming.
 
 These parameters enable you to customize the settings for your SNP intersection analysis using the `get-intersection` command. It's important to ensure that you provide the required parameters and tailor the optional ones to align with your specific analysis requirements.
-
-### Getting a basic phylogeny
-
-Generate a basic phylogeny based on the unique mutations identified for each variant using GRAMEP's `phylogenetic` command. Here's a basic example:
-
-<!-- termynal -->
-
-```
-$ gramep phylogenetic [OPTIONS]
-```
-
-For detailed information on each available option and its usage, utilize the `--help` flag. This flag provides comprehensive details about this functionality.
-
-<div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep phylogenetic --help</span><span data-ty>
-
-╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --save-path           TEXT  📂 Folder where the results of the analyses performed by the get-mutations command are saved. [default: None] [required]                                    │
-│    --save-heatmap              💾🔥🗺 Save heatmap of the distance matrix.                                                                                                                  │
-│    --help                      Show this message and exit.                                                                                                                                 │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-<br></span></div>
-
-
 
 ### Classifying Biological Sequences
 
@@ -129,18 +106,21 @@ This command allows you to perform sequence classification tasks with ease. For 
 ```
 $ gramep classify --help
 
-                                                                                                                                        
-╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --word                          -w          INTEGER  📝 Word size. [default: None] [required]                                     │
-│ *  --step                          -s          INTEGER  ⏭ Step size. [default: None] [required]                                      │
-│ *  --save-path                                 TEXT     📂 Path to save results. [default: None] [required]                          │
-│ *  --dir-path                      -dpath      TEXT     📂 Path to directory containing variants. [default: None] [required]         │
-│    --dictonary                     -d          TEXT     🧬📖 DNA dictionary. [default: ACTG]                                         │
-│    --should-save-data                                   💾 Save data used for classification. [default: True]                        │
-│    --should-save-model                                  💾 Save model used for classification. [default: True]                       │
-│    --should-save-confusion-matrix                       💾🟥🟦 Save confusion matrix. [default: True]                                │
-│    --help                                               Show this message and exit.                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Usage: gramep classify [OPTIONS]                                                                                                            
+                                                                                                                                             
+ Classify variants.                                                                                                                          
+                                                                                                                                             
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *  --word              -w          INTEGER  📏 Word size. [default: None] [required]                                                      │
+│ *  --step              -s          INTEGER  ⏭ Step size. [default: None] [required]                                                       │
+│ *  --save-path                     TEXT     📂 Path to save results. [default: None] [required]                                           │
+│ *  --dir-path          -dpath      TEXT     📂 Path to directory containing variants. [default: None] [required]                          │
+│    --get-kmers                       📏 Get only k-mers.                                                                           │
+│    --reference-path    -rpath      TEXT     📂 Path to reference sequence. [default: None]                                                │
+│    --dictonary         -d          TEXT     🧬📖 DNA dictionary. [default: DNA]                                                           │
+│    --chunk-size                    INTEGER  📦 Chunk size for loading sequences. [default: 100]                                           │
+│    --help                                   Show this message and exit.                                                                   │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 The `classify` command of GRAMEP is used to train classification model to classify biological sequences. 
@@ -163,18 +143,22 @@ This command allows you to leverage your trained classification model to predict
 ```
 $ gramep predict --help
 
-                                                                                                                                        
-╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --word              -w             INTEGER  📝 Word size. [default: None] [required]                                              │
-│ *  --step              -s             INTEGER  ⏭ Step size. [default: None] [required]                                               │
-│ *  --save-path                        TEXT     📂 Path to save results. [default: None] [required]                                   │
-│ *  --predict-seq-path  -pseqpath      TEXT     📂 Path to sequences to be predicted. [default: None] [required]                      │
-│ *  --dir-path          -dpath         TEXT     📂 Path to directory containing the files. [default: None] [required]                 │
-│ *  --dict              -d             TEXT     🧬📖 DNA dictionary. [default: None] [required]                                       │
-│ *  --load-ranges-path  -lrpath        TEXT     📂 Path to ranges file. [default: None] [required]                                    │
-│ *  --load-model-path   -lmpath        TEXT     📂 Path to model file. [default: None] [required]                                     │
-│    --help                                      Show this message and exit.                                                           │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ Usage: gramep predict [OPTIONS]                                                                                                             
+                                                                                                                                             
+ Predict variants.                                                                                                                           
+                                                                                                                                             
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *  --word              -w             INTEGER  📏 Word size. [default: None] [required]                                                   │
+│ *  --step              -s             INTEGER  ⏭ Step size. [default: None] [required]                                                    │
+│ *  --save-path                        TEXT     📂 Path to save results. [default: None] [required]                                        │
+│ *  --predict-seq-path  -pseqpath      TEXT     📂 Path to sequences to be predicted. [default: None] [required]                           │
+│ *  --dir-path          -dpath         TEXT     📂 Path to directory containing the files. [default: None] [required]                      │
+│ *  --dict              -d             TEXT     🧬📖 DNA dictionary. [default: None] [required]                                            │
+│ *  --load-ranges-path  -lrpath        TEXT     📂 Path to ranges file. [default: None] [required]                                         │
+│ *  --load-model-path   -lmpath        TEXT     📂🤖 Path to model file. [default: None] [required]                                        │
+│    --chunk-size                       INTEGER  📦 Chunk size for loading sequences. [default: 100]                                        │
+│    --help                                      Show this message and exit.                                                                │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 By using the `predict` command, you can apply your trained model to make accurate class predictions on new biological sequences. 
 
