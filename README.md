@@ -10,7 +10,6 @@
 **GRAMEP** is a powerful, Python-based tool designed for the precise identification of Single Nucleotide Polymorphisms (SNPs) within biological sequences.  It goes beyond basic SNP identification, offering advanced functionalities including:
 
 * **Intersection analysis:** Analyze mutations found in different variants to identify shared mutations.
-* **Phylogeny generation:** Generate a phylogenetic tree based on the exclusive mutations found for each variant.
 * **Classification model training:** Train a classification model to predict the class of new sequences.
 
 GRAMEP is accessible through a robust and intuitive Command-Line Interface (CLI). The primary command is `gramep`, with sub-commands for each action the application can perform.
@@ -65,16 +64,6 @@ This command allows you to analyze and find common mutations shared among multip
 ```bash
 gramep get-intersection --help
 ```
-
-### Getting a basic phylogeny
-
-Generate a basic phylogeny based on the unique mutations identified for each variant using GRAMEP's `phylogenetic` command. Here's a basic example:
-
-```bash
-gramep phylogenetic [OPTIONS]
-```
-
-For detailed information on each available option and its usage, utilize the `--help` flag. This flag provides comprehensive details about this functionality.
 
 ### Classifying Biological Sequences
 
