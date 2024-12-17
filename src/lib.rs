@@ -7,7 +7,9 @@
 extern crate concat_string;
 use anyhow::{Error, Result};
 use bio::alignment::distance::simd::*;
+use bio::alignment::Alignment;
 use bio::io::fasta;
+use bio::pattern_matching::myers::{Myers, MyersBuilder};
 use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -1001,6 +1003,148 @@ fn process_sequence(
         .collect()
 }
 
+fn process_sequence_myers(
+    seq: &str,
+    ref_seq_str: &Arc<String>,
+    exclusive_kmers_set: &Arc<HashSet<String>>,
+    final_positions: &FxHashMap<String, Vec<u8>>,
+    k: usize,
+    step: usize,
+    max_dist: usize,
+    ref_end: usize,
+) -> Vec<String> {
+    let splitted_seq: HashSet<String> = split_seq(seq, k, step).into_iter().collect();
+    let var_kmers: Vec<&String> = exclusive_kmers_set.intersection(&splitted_seq).collect();
+
+    var_kmers
+        .into_par_iter()
+        .flat_map(|var_kmer| {
+            // Get position vector for this kmer
+            let positions = match final_positions.get(var_kmer) {
+                Some(pos) => pos,
+                None => return Vec::new(),
+            };
+
+            // Get search ranges based on positions
+            let search_ranges = get_search_ranges(positions, ref_end, seq.len());
+
+            let pattern = var_kmer.as_bytes();
+
+            search_ranges
+                .into_par_iter()
+                .flat_map(move |range| {
+                    let text = ref_seq_str[range.start..range.end].as_bytes().to_vec();
+                    let text_len = text.len();
+
+                    let mut myers = Myers::<u64>::new(pattern);
+                    let mut aln = Alignment::default();
+
+                    let mut variations = Vec::new();
+
+                    // Convert to slice and find matches
+                    let mut matches = myers.find_all(&text, max_dist.try_into().unwrap_or(0));
+
+                    while matches.next_alignment(&mut aln) {
+                        let alg_start = aln.ystart;
+                        let alg_end = aln.yend;
+
+                        let alg_splitted = aln
+                            .pretty(pattern, &text, text_len)
+                            .split('\n')
+                            .map(|s| s.trim().replace(|c: char| c.is_whitespace(), ""))
+                            .collect::<Vec<String>>();
+
+                        if alg_splitted.len() < 3 {
+                            continue;
+                        }
+
+                        let splitted_pattern = &alg_splitted[0];
+                        let splitted_text = &alg_splitted[2];
+
+                        for (i, op) in aln.operations.iter().enumerate() {
+                            match op {
+                                bio::alignment::AlignmentOperation::Subst => {
+                                    let mutation_pos = range.start + alg_start + i + 1;
+                                    let text_char =
+                                        splitted_text.chars().nth(i + alg_start).unwrap_or('x');
+                                    let pattern_char =
+                                        splitted_pattern.chars().nth(i).unwrap_or('x');
+
+                                    // Convert text slice to string explicitly
+                                    let text_slice_str = std::str::from_utf8(
+                                        &text[(alg_start)
+                                            ..(alg_end - max_dist + aln.score as usize)],
+                                    )
+                                    .unwrap_or("");
+
+                                    variations.push(concat_string!(
+                                        mutation_pos.to_string(),
+                                        ":",
+                                        String::from(text_char),
+                                        String::from(pattern_char),
+                                        ":",
+                                        text_slice_str,
+                                        ":",
+                                        var_kmer
+                                    ));
+                                }
+                                bio::alignment::AlignmentOperation::Del => {
+                                    let mutation_pos = range.start + alg_start + i + 1;
+                                    let text_char =
+                                        splitted_text.chars().nth(i + alg_start).unwrap_or('x');
+
+                                    // Convert text slice to string explicitly
+                                    let text_slice_str = std::str::from_utf8(
+                                        &text[(alg_start)
+                                            ..(alg_end - max_dist + aln.score as usize)],
+                                    )
+                                    .unwrap_or("");
+
+                                    variations.push(concat_string!(
+                                        mutation_pos.to_string(),
+                                        ":",
+                                        String::from(text_char),
+                                        "x",
+                                        ":",
+                                        text_slice_str,
+                                        ":",
+                                        var_kmer
+                                    ));
+                                }
+                                bio::alignment::AlignmentOperation::Ins => {
+                                    let mutation_pos = range.start + alg_start + i + 1;
+                                    let pattern_char =
+                                        splitted_pattern.chars().nth(i).unwrap_or('x');
+
+                                    // Convert text slice to string explicitly
+                                    let text_slice_str = std::str::from_utf8(
+                                        &text[(alg_start)
+                                            ..(alg_end - max_dist + aln.score as usize)],
+                                    )
+                                    .unwrap_or("");
+
+                                    variations.push(concat_string!(
+                                        mutation_pos.to_string(),
+                                        ":+",
+                                        String::from(pattern_char),
+                                        ":",
+                                        text_slice_str,
+                                        ":",
+                                        var_kmer
+                                    ));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    variations
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
 /// Get the search ranges for a k-mer based on its positions.
 ///
 /// This function calculates the search ranges for a k-mer based on its positions in a sequence.
@@ -1069,6 +1213,82 @@ fn get_interval_index(value: f64) -> usize {
 /// let kmers = get_kmers(seq_path, k, step, dict, reference, batch_size);
 /// ```
 ///
+// fn get_kmers_impl(
+//     seq_path: String,
+//     k: usize,
+//     step: usize,
+//     dict: String,
+//     reference: bool,
+//     batch_size: usize,
+// ) -> Result<FxHashMap<String, Vec<u8>>> {
+//     let _sp = Spinner::new(Spinners::GrowVertical, String::new());
+//     let reader = fasta::Reader::from_file(seq_path)?;
+//     let dict = Arc::new(dict);
+
+//     let sequences: Vec<_> = reader
+//         .records()
+//         .filter_map(|result| {
+//             let record = result.ok()?;
+//             let seq = String::from_utf8(record.seq().to_owned()).ok()?;
+//             if !contains_forbidden_chars(&seq, &dict) {
+//                 Some(seq)
+//             } else {
+//                 None
+//             }
+//         })
+//         .collect();
+
+//     // Create tuple of hashmaps for frequencies and positions
+//     let (hm, hm_positions): (FxHashMap<String, u32>, FxHashMap<String, Vec<u64>>) = sequences
+//         .par_chunks(batch_size)
+//         .map(|batch| {
+//             let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
+//             let mut batch_positions: FxHashMap<String, Vec<u64>> = FxHashMap::default();
+
+//             for seq in batch {
+//                 let end = seq.len() - k + 1;
+//                 for index in (0..end).step_by(step) {
+//                     let kmer = seq[index..index + k].to_string();
+
+//                     // Update frequency count
+//                     *batch_hm.entry(kmer.clone()).or_insert(0) += 1;
+
+//                     // Update position distribution
+//                     let relative_pos = index as f64 / end as f64;
+//                     let bin_index = get_interval_index(relative_pos);
+//                     let pos_vec = batch_positions.entry(kmer).or_insert_with(|| vec![0; 100]);
+//                     pos_vec[bin_index] += 1;
+//                 }
+//             }
+//             (batch_hm, batch_positions)
+//         })
+//         .reduce(
+//             || (FxHashMap::default(), FxHashMap::default()),
+//             |mut acc, other| {
+//                 // Merge frequency counts
+//                 for (key, value) in other.0 {
+//                     *acc.0.entry(key).or_insert(0) += value;
+//                 }
+
+//                 // Merge position distributions
+//                 for (key, pos_vec) in other.1 {
+//                     let acc_vec = acc.1.entry(key).or_insert_with(|| vec![0; 100]);
+//                     for (i, &count) in pos_vec.iter().enumerate() {
+//                         acc_vec[i] += count;
+//                     }
+//                 }
+//                 acc
+//             },
+//         );
+
+//     let threshold = if reference { 0 } else { max_entropy(&hm) };
+//     let selected_kmers = select_kmers(&hm, threshold);
+
+//     // Process positions for selected kmers
+//     let final_positions = process_positions(&selected_kmers, &hm_positions);
+
+//     Ok(final_positions)
+// }
 fn get_kmers_impl(
     seq_path: String,
     k: usize,
@@ -1077,12 +1297,13 @@ fn get_kmers_impl(
     reference: bool,
     batch_size: usize,
 ) -> Result<FxHashMap<String, Vec<u8>>> {
-    let _sp = Spinner::new(Spinners::GrowVertical, String::new());
     let reader = fasta::Reader::from_file(seq_path)?;
     let dict = Arc::new(dict);
 
-    let sequences: Vec<_> = reader
+    // Create a parallel iterator that processes sequences in batches
+    let (hm, hm_positions): (FxHashMap<String, u32>, FxHashMap<String, Vec<u64>>) = reader
         .records()
+        // Filter and transform records to batches of valid sequences
         .filter_map(|result| {
             let record = result.ok()?;
             let seq = String::from_utf8(record.seq().to_owned()).ok()?;
@@ -1092,11 +1313,20 @@ fn get_kmers_impl(
                 None
             }
         })
-        .collect();
-
-    // Create tuple of hashmaps for frequencies and positions
-    let (hm, hm_positions): (FxHashMap<String, u32>, FxHashMap<String, Vec<u64>>) = sequences
-        .par_chunks(batch_size)
+        // Group sequences into batches
+        .batching(|it| {
+            let mut batch = Vec::with_capacity(batch_size);
+            for _ in 0..batch_size {
+                match it.next() {
+                    Some(seq) => batch.push(seq),
+                    None if !batch.is_empty() => break,
+                    None => return None,
+                }
+            }
+            Some(batch)
+        })
+        // Process each batch in parallel
+        .par_bridge()
         .map(|batch| {
             let mut batch_hm: FxHashMap<String, u32> = FxHashMap::default();
             let mut batch_positions: FxHashMap<String, Vec<u64>> = FxHashMap::default();
@@ -1118,6 +1348,7 @@ fn get_kmers_impl(
             }
             (batch_hm, batch_positions)
         })
+        // Reduce results from all batches
         .reduce(
             || (FxHashMap::default(), FxHashMap::default()),
             |mut acc, other| {
@@ -1267,6 +1498,99 @@ fn get_freq_kmers(diffs: FxHashMap<String, Vec<String>>) -> Py<PyAny> {
     return Python::with_gil(|py| (freqs, var_list).to_object(py));
 }
 
+// #[pyfunction]
+// fn kmers_analysis(
+//     seq_path: String,
+//     ref_path: String,
+//     exclusive_kmers: Vec<String>,
+//     final_positions: FxHashMap<String, Vec<u8>>,
+//     k: usize,
+//     step: usize,
+//     max_dist: usize,
+//     mode: String,
+//     batch_size: usize,
+// ) -> PyResult<Py<PyAny>> {
+//     Python::with_gil(|py| {
+//         // Load reference sequence
+//         let ref_reader = fasta::Reader::from_file(&ref_path)
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?
+//             .records()
+//             .next()
+//             .ok_or_else(|| {
+//                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Reference sequence not found")
+//             })?
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+//         let ref_seq_str = Arc::new(
+//             String::from_utf8(ref_reader.seq().to_owned())
+//                 .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?
+//                 .to_uppercase(),
+//         );
+//         let ref_end = ref_seq_str.chars().count() - k + step;
+
+//         let exclusive_kmers_set: Arc<HashSet<String>> =
+//             Arc::new(exclusive_kmers.into_iter().collect());
+
+//         // Create a vector for reading sequences
+//         let sequences = fasta::Reader::from_file(&seq_path)
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?
+//             .records()
+//             .map(|r| {
+//                 r.map(|record| {
+//                     (
+//                         String::from_utf8(record.seq().to_owned())
+//                             .unwrap()
+//                             .to_uppercase(),
+//                         record.id().to_string(),
+//                     )
+//                 })
+//             })
+//             .collect::<Result<Vec<_>, _>>()
+//             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+//         // Process sequences in batches, using parallel processing
+//         let variations_positions: FxHashMap<String, Vec<String>> = sequences
+//             .par_chunks(batch_size)
+//             .flat_map(|batch| {
+//                 batch
+//                     .par_iter()
+//                     // .map(|(seq, seq_name)| {
+//                     .filter_map(|(seq, seq_name)| {
+//                         let variations = match mode.as_str() {
+//                             "snps" => process_sequence(
+//                                 seq,
+//                                 &ref_seq_str,
+//                                 &exclusive_kmers_set,
+//                                 &final_positions,
+//                                 k,
+//                                 step,
+//                                 max_dist,
+//                                 ref_end,
+//                             ),
+//                             "indels" => process_sequence_myers(
+//                                 seq,
+//                                 &ref_seq_str,
+//                                 &exclusive_kmers_set,
+//                                 &final_positions,
+//                                 k,
+//                                 step,
+//                                 max_dist,
+//                                 ref_end,
+//                             ),
+//                             _ => {
+//                                 return None;
+//                             }
+//                         };
+//                         // Ok((seq_name.clone(), variations))
+//                         Some((seq_name.clone(), variations))
+//                     })
+//                 // .collect::<Vec<_>>()
+//             })
+//             .collect();
+
+//         Ok(variations_positions.to_object(py))
+//     })
+// }
+
 #[pyfunction]
 fn kmers_analysis(
     seq_path: String,
@@ -1276,6 +1600,7 @@ fn kmers_analysis(
     k: usize,
     step: usize,
     max_dist: usize,
+    mode: String,
     batch_size: usize,
 ) -> PyResult<Py<PyAny>> {
     Python::with_gil(|py| {
@@ -1298,41 +1623,66 @@ fn kmers_analysis(
         let exclusive_kmers_set: Arc<HashSet<String>> =
             Arc::new(exclusive_kmers.into_iter().collect());
 
-        // Create a vector for reading sequences
-        let sequences = fasta::Reader::from_file(&seq_path)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?
-            .records()
-            .map(|r| {
-                r.map(|record| {
-                    (
-                        String::from_utf8(record.seq().to_owned())
-                            .unwrap()
-                            .to_uppercase(),
-                        record.id().to_string(),
-                    )
-                })
-            })
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        // Create a reader for sequences
+        let reader = fasta::Reader::from_file(&seq_path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
 
         // Process sequences in batches, using parallel processing
-        let variations_positions: FxHashMap<String, Vec<String>> = sequences
-            .par_chunks(batch_size)
+        let variations_positions: FxHashMap<String, Vec<String>> = reader
+            .records()
+            // Transform records into sequences and names
+            .filter_map(|result| {
+                let record = result.ok()?;
+                let seq = String::from_utf8(record.seq().to_owned())
+                    .ok()?
+                    .to_uppercase();
+                let seq_name = record.id().to_string();
+                Some((seq, seq_name))
+            })
+            // Group sequences into batches
+            .batching(|it| {
+                let mut batch = Vec::with_capacity(batch_size);
+                for _ in 0..batch_size {
+                    match it.next() {
+                        Some(seq) => batch.push(seq),
+                        None if !batch.is_empty() => break,
+                        None => return None,
+                    }
+                }
+                Some(batch)
+            })
+            // Process batches in parallel
+            .par_bridge()
             .flat_map(|batch| {
                 batch
-                    .par_iter()
-                    .map(|(seq, seq_name)| {
-                        let variations = process_sequence(
-                            seq,
-                            &ref_seq_str,
-                            &exclusive_kmers_set,
-                            &final_positions,
-                            k,
-                            step,
-                            max_dist,
-                            ref_end,
-                        );
-                        (seq_name.clone(), variations)
+                    .into_par_iter()
+                    .filter_map(|(seq, seq_name)| {
+                        let variations = match mode.as_str() {
+                            "snps" => process_sequence(
+                                &seq,
+                                &ref_seq_str,
+                                &exclusive_kmers_set,
+                                &final_positions,
+                                k,
+                                step,
+                                max_dist,
+                                ref_end,
+                            ),
+                            "indels" => process_sequence_myers(
+                                &seq,
+                                &ref_seq_str,
+                                &exclusive_kmers_set,
+                                &final_positions,
+                                k,
+                                step,
+                                max_dist,
+                                ref_end,
+                            ),
+                            _ => {
+                                return None;
+                            }
+                        };
+                        Some((seq_name, variations))
                     })
                     .collect::<Vec<_>>()
             })

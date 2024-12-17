@@ -32,6 +32,7 @@ def execute_configparser(objective: str, config_file: str):
             annotation_path = str(
                 config_parser.get('mutations', 'annotation_path')
             )
+            mode = str(config_parser.get('mutations', 'mode'))
             save_path = str(config_parser.get('mutations', 'save_path'))
             word = config_parser.getint('mutations', 'word')
             step = config_parser.getint('mutations', 'step')
@@ -46,6 +47,7 @@ def execute_configparser(objective: str, config_file: str):
                 reference_path=reference_path,
                 sequence_path=sequence_path,
                 annotation_path=annotation_path,
+                mode=mode,
                 save_path=save_path,
                 word=word,
                 step=step,

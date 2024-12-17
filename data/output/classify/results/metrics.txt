@@ -1,0 +1,45 @@
+GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle.
+Results from validation
+Accuracy:1.0
+Metrics:
+              precision    recall  f1-score   support
+
+       Alpha       1.00      1.00      1.00        10
+        Beta       1.00      1.00      1.00        10
+       Delta       1.00      1.00      1.00        10
+       Gamma       1.00      1.00      1.00        10
+     Omicron       1.00      1.00      1.00        10
+
+    accuracy                           1.00        50
+   macro avg       1.00      1.00      1.00        50
+weighted avg       1.00      1.00      1.00        50
+GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle.
+Results from validation
+Accuracy:1.0
+Metrics:
+              precision    recall  f1-score   support
+
+       Alpha       1.00      1.00      1.00        10
+        Beta       1.00      1.00      1.00        10
+       Delta       1.00      1.00      1.00        10
+       Gamma       1.00      1.00      1.00        10
+     Omicron       1.00      1.00      1.00        10
+
+    accuracy                           1.00        50
+   macro avg       1.00      1.00      1.00        50
+weighted avg       1.00      1.00      1.00        50
+GRAMEP - Genome vaRiation Analysis from the Maximum Entropy Principle.
+Results from validation
+Accuracy:1.0
+Metrics:
+              precision    recall  f1-score   support
+
+       Alpha       1.00      1.00      1.00        11
+        Beta       1.00      1.00      1.00        10
+       Delta       1.00      1.00      1.00        10
+       Gamma       1.00      1.00      1.00        10
+     Omicron       1.00      1.00      1.00        10
+
+    accuracy                           1.00        51
+   macro avg       1.00      1.00      1.00        51
+weighted avg       1.00      1.00      1.00        51

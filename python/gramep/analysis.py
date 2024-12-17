@@ -49,6 +49,7 @@ def mutations_analysis(
     snps_max: int,
     annotation_dataframe: pd.DataFrame,
     sequence_interval: pd.Series,
+    mode: str = 'snps',
     create_report: bool = False,
     chunk_size: int = 100,
 ) -> tuple[defaultdict[str, list[str]], np.ndarray] | tuple[
@@ -105,6 +106,7 @@ def mutations_analysis(
             k=word,
             step=step,
             max_dist=snps_max,
+            mode=mode,
             batch_size=chunk_size,
         )
 

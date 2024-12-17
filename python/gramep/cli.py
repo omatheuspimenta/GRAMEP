@@ -75,6 +75,13 @@ def get_mutations(
         str,
         Option('--apath', help=':open_file_folder: Path to annotation file.'),
     ] = None,
+    mode: Annotated[
+        str,
+        Option(
+            '--mode',
+            help=':heavy_check_mark: Mode. Options: snps (only SNPs) or indels (indels and SNPs).',
+        ),
+    ] = 'snps',
     snps_max: Annotated[
         int,
         Option(
@@ -108,6 +115,7 @@ def get_mutations(
         reference_path=reference_path,
         sequence_path=sequence_path,
         annotation_path=annotation_path,
+        mode=mode,
         save_path=save_path,
         word=word,
         step=step,

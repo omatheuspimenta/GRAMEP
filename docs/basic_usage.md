@@ -55,6 +55,10 @@ The parameters identified as `required` are essential and must be provided for t
 
 The `word` parameter is especially useful for identifying areas of interest within the investigation. The `step` parameter, on the other hand, sets the size of the sliding window and whether overlap between the k-mers derived from each sequence is required.
 
+!!! info "`--mode` parameter"
+    There are two modes for performing the analysis: `snps` and `indels`. The `snps` mode is used to identify SNP-type mutations, while the `indels` mode detects insertion, deletion, and substitution-type mutations. 
+    The choice of mode depends on the objective. The `snps` mode is generally faster, whereas the `indels` mode may take longer to execute. Additionally, when using the `indels` mode, it is necessary to adjust the `--snps-max` parameter, as the results are obtained using the Myers algorithm.
+
 By utilizing the previously provided downloadable data, we can proceed to run an example aimed at identifying the most informative SNPs for a specific SARS-CoV-2 variant.
 
 !!! info "`--save-path` parameter"
@@ -388,6 +392,8 @@ reference_path = data/reference/SARS-CoV2_wuhan_refseq.fasta
 sequence_path = data/VOCs/Delta.fasta
 # Annotation path
 annotation_path = data/reference_annotation/GCF_009858895.2_ASM985889v3_genomic.gff
+# Mode
+mode = snps
 # Save path
 save_path = data/output/mutations/
 # Word size
@@ -534,6 +540,6 @@ The values obtained through the `grid-search` are suggested values and may not b
 
 ## About this Basic usage
 
-This tutorial was authored in `October 2024`, and it's possible that the commands may receive updates in the future. To ensure you have the most current information and options, we recommend consulting the `--help` command, which is a reliable way to stay up-to-date.
+This tutorial was authored in `December 2024`, and it's possible that the commands may receive updates in the future. To ensure you have the most current information and options, we recommend consulting the `--help` command, which is a reliable way to stay up-to-date.
 
 If you come across any errors in this tutorial, please feel free to do so using the following [link](https://github.com/omatheuspimenta/GRAMEP/issues). Your contributions are greatly appreciated and help maintain the tutorial's accuracy and usefulness.

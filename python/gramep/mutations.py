@@ -41,6 +41,7 @@ def get_mutations(
     word: int,
     step: int,
     annotation_path: str | None = None,
+    mode: str = 'snps',
     snps_max: int = 1,
     dictonary: str = 'DNA',
     create_report: bool = False,
@@ -132,6 +133,7 @@ def get_mutations(
         snps_max=snps_max,
         annotation_dataframe=annotation_df,
         sequence_interval=sequence_interval,
+        mode=mode,
         create_report=create_report,
         chunk_size=chunk_size,
     )
