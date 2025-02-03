@@ -1441,7 +1441,7 @@ fn write_ref(ref_path: String, variations: Vec<String>, save_path: String) -> ()
             let position = variation[0].parse::<usize>().unwrap();
             let snp = variation[1].to_string();
             seq_str.replace_range(
-                position..position + 1,
+                position-1..position,
                 &snp.chars().nth(1).unwrap().to_string(),
             );
         }

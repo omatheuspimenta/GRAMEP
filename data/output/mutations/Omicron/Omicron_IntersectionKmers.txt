@@ -1,1 +1,1 @@
-['TGA', 'CTT', 'TAA', 'GAA', 'AAT', 'CTA', 'TTA', 'AAG', 'ATG', 'GCT', 'TGT', 'AGT', 'CTG', 'AAC', 'GTT', 'CAA', 'TAC', 'ACA', 'TTG', 'TAT', 'GTG', 'TTC', 'TGC', 'ACT', 'TCA', 'TGG', 'AAA', 'TCT', 'CAT', 'AGA', 'TTT', 'ATT']
+['GCT', 'AAA', 'GTG', 'TGG', 'AAC', 'TGC', 'TGA', 'ACA', 'TAC', 'TCA', 'CTG', 'TTG', 'TAT', 'CTA', 'TTT', 'GAA', 'TGT', 'TTC', 'ATG', 'AGT', 'ATT', 'CAT', 'GTT', 'AAT', 'TCT', 'AAG', 'AGA', 'CTT', 'ACT', 'CAA', 'TAA', 'TTA']
