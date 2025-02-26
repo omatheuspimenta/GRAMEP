@@ -94,7 +94,7 @@ gramep predict --help
 ```
 
 ## Citation
-Pimenta-Zanon, M.H., Kashiwabara, A.Y., Vanzela, A.L.L. et al. GRAMEP: an alignment-free method based on the maximum entropy principle for identifying SNPs. BMC Bioinformatics 26, 66 (2025). https://doi.org/10.1186/s12859-025-06037-z
+> Pimenta-Zanon, M.H., Kashiwabara, A.Y., Vanzela, A.L.L. et al. GRAMEP: an alignment-free method based on the maximum entropy principle for identifying SNPs. BMC Bioinformatics 26, 66 (2025). https://doi.org/10.1186/s12859-025-06037-z
 
 ```bibtex
 @article{PimentaZanon2025,
