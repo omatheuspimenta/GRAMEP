@@ -1,8 +1,9 @@
 from shutil import rmtree
 
-from gramep.cli import app
 from pytest import fixture, mark
 from typer.testing import CliRunner
+
+from gramep.cli import app
 
 runner = CliRunner()
 

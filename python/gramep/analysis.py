@@ -12,14 +12,11 @@ Contents:
 Todo:
     * Implement tests.
 """
+
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from gramep.data_io import load_variants_exclusive
-from gramep.helpers import make_report
-from gramep.messages import Messages
-from gramep.utilrs import kmers_analysis, variants_intersection
 from joblib import Parallel, delayed
 from joblib_progress import joblib_progress
 from matplotlib import pyplot as plt
@@ -32,6 +29,11 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 from upsetplot import from_contents, plot
+
+from gramep.data_io import load_variants_exclusive
+from gramep.helpers import make_report
+from gramep.messages import Messages
+from gramep.utilrs import kmers_analysis, variants_intersection
 
 message = Messages()
 """
@@ -52,9 +54,11 @@ def mutations_analysis(
     mode: str = 'snps',
     create_report: bool = False,
     chunk_size: int = 100,
-) -> tuple[defaultdict[str, list[str]], np.ndarray] | tuple[
-    None, None
-] | tuple[defaultdict[str, list[str]], None]:
+) -> (
+    tuple[defaultdict[str, list[str]], np.ndarray]
+    | tuple[None, None]
+    | tuple[defaultdict[str, list[str]], None]
+):
     """
     Perform k-mers analysis and optionally generate a report.
 

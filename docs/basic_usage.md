@@ -298,6 +298,8 @@ Inside the `tutorial_data/` folder, you will find a new folder `classify` with t
 
 After you've trained and validated a classification model with the classify command, you can use the predict command to make predictions on fresh sequences. Simply include the `--help` flag when running the command for further information and guidance.
 
+**Note:** Models saved by `classify` depend on the scikit-learn version used to train them. Models trained with an earlier GRAMEP version are not supported by this release and must be retrained with `gramep classify`.
+
 <div class="termy" data-termynal data-ty-macos data-ty-title="shell"><span data-ty="input" data-ty-prompt="$">gramep predict --help</span><span data-ty>                                                                                                                           
  Usage: gramep predict [OPTIONS]                                                                                          
                                                                                                                           

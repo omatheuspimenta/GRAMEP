@@ -9,13 +9,15 @@ The 'snipit' method is used for generating graphical visualizations.
 Contents:
     * plot_graphic: Plot graphical visualization of variations and k-mer frequencies.
 """
+
 from collections import defaultdict
+
+from matplotlib import patches as patches
+from matplotlib import pyplot as plt
 
 from gramep.helpers import get_colours, next_colour
 from gramep.messages import Messages
 from gramep.utilrs import ref_length
-from matplotlib import patches as patches
-from matplotlib import pyplot as plt
 
 message = Messages()
 """
@@ -149,7 +151,6 @@ def plot_graphic(
         bottom_polygon = y_inc * -1.7
 
         for sequence in snp_dict[snp]:
-
             name, ref, var, y_pos = sequence
             bottom_of_box = (y_pos * y_inc) - (0.5 * y_inc)
             # draw box for snp
@@ -261,7 +262,7 @@ def plot_graphic(
             color='#cbaca4',
         )
 
-    ax.spines['top'].set_visible(False)   ## make axes invisible
+    ax.spines['top'].set_visible(False)  ## make axes invisible
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
     ax.spines['bottom'].set_visible(False)

@@ -16,9 +16,11 @@ Contents:
 Todo:
     * Implement tests.
 """
+
 from itertools import cycle
 
 import pandas as pd
+
 from gramep.messages import Messages
 
 message = Messages()
@@ -134,7 +136,7 @@ def make_report(
                             + ';'
                             + str(snp_value[1])
                         )
-                    report_list.append(report_line)
+                        report_list.append(report_line)
             else:
                 report_line = str(
                     str(seq_name)

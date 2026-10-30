@@ -10,6 +10,7 @@ Contents:
 Todo:
     * Implement tests.
 """
+
 from collections import defaultdict
 from sys import exit
 

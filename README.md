@@ -93,6 +93,8 @@ This command allows you to leverage your trained classification model to predict
 gramep predict --help
 ```
 
+**Note:** Models saved by `classify` depend on the scikit-learn version used to train them. Models trained with an earlier GRAMEP version are not supported by this release and must be retrained with `gramep classify`.
+
 ## Citation
 Soon
 

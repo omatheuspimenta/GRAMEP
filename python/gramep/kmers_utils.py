@@ -16,6 +16,7 @@ the 'dictionary' parameter.
 Todo:
     * Implement tests.
 """
+
 from collections import defaultdict
 
 

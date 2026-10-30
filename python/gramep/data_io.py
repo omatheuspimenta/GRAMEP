@@ -28,6 +28,7 @@ Contents:
 Todo:
     * Implement tests.
 """
+
 import pickle
 from collections import defaultdict
 from os import scandir
@@ -36,9 +37,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from gffpandas import gffpandas as gffpd
-from gramep.helpers import get_sequence_interval
-from gramep.messages import Messages
-from gramep.utilrs import get_kmers, write_ref
 from matplotlib import pyplot as plt
 from rich.progress import (
     BarColumn,
@@ -51,6 +49,10 @@ from rich.progress import (
 from seaborn import heatmap
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import MinMaxScaler
+
+from gramep.helpers import get_sequence_interval
+from gramep.messages import Messages
+from gramep.utilrs import get_kmers, write_ref
 
 message = Messages()
 """

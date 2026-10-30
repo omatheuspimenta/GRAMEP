@@ -1,6 +1,6 @@
 [package]
 name = "gramep"
-version = "1.2.1"
+version = "1.3.0"
 edition = "2021"
 
 [lib]
@@ -8,7 +8,7 @@ name = "utilrs"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = "0.22.5"
+pyo3 = "0.30.1"
 rayon = "1.10"
 num_cpus = "1.16"
 rustc-hash = "2.1.0"

@@ -29,20 +29,6 @@ from os import listdir
 
 import numpy as np
 import pandas as pd
-from gramep.data_io import (
-    load_model,
-    load_ranges,
-    load_variants_kmers,
-    save_confusion_matrix,
-    save_data,
-    save_metrics,
-    save_model,
-    save_predict_data,
-    save_ranges,
-)
-from gramep.messages import Messages
-from gramep.mutations import get_only_kmers
-from gramep.utilrs import load_sequences_classify
 from joblib import Parallel, delayed
 from joblib_progress import joblib_progress
 from rich.progress import (
@@ -65,6 +51,21 @@ from sklearn.model_selection import (
     train_test_split,
 )
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+
+from gramep.data_io import (
+    load_model,
+    load_ranges,
+    load_variants_kmers,
+    save_confusion_matrix,
+    save_data,
+    save_metrics,
+    save_model,
+    save_predict_data,
+    save_ranges,
+)
+from gramep.messages import Messages
+from gramep.mutations import get_only_kmers
+from gramep.utilrs import load_sequences_classify
 
 message = Messages()
 """
@@ -217,15 +218,20 @@ def sequence_classification(
 
     message.info_classifying()
 
+    # Sort rows so the seeded split does not depend on loading order
+    data_frame = data_frame.sort_values(
+        by=list(data_frame.columns), ignore_index=True
+    )
+
     # Split the data into training and test sets
     x_axis = data_frame.drop(columns='CLASS', axis=1)
     y_axis = data_frame['CLASS']
     x_train, x_test, y_train, y_test = train_test_split(
-        x_axis, y_axis, test_size=0.2, stratify=y_axis
+        x_axis, y_axis, test_size=0.2, stratify=y_axis, random_state=7
     )
 
     # Create a random forest classifier with default parameters
-    rf_classifier = RandomForestClassifier(n_estimators=100)
+    rf_classifier = RandomForestClassifier(n_estimators=100, random_state=7)
     rf_classifier.fit(x_train, y_train)
 
     save_model(model=rf_classifier, dir_path=dir_path)

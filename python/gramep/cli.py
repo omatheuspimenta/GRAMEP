@@ -1,3 +1,7 @@
+from rich.console import Console
+from typer import Context, Exit, Option, Typer
+from typing_extensions import Annotated
+
 from gramep import __version__
 from gramep.classify_utils import classify as _classify
 from gramep.classify_utils import predict as _predict
@@ -8,9 +12,6 @@ from gramep.mutations import get_only_kmers as _get_only_kmers
 from gramep.mutations import (
     get_variants_intersection as _get_variants_intersection,
 )
-from rich.console import Console
-from typer import Context, Exit, Option, Typer
-from typing_extensions import Annotated
 
 app = Typer(rich_markup_mode='rich')
 console = Console()

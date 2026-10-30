@@ -6,11 +6,13 @@ word and step size.
 Contents:
     * grid_search: Perform grid search to suggest a value for word and step size.
 """
+
+from thefuzz import fuzz
+from thefuzz.process import dedupe
+
 from gramep.data_io import load_sequences
 from gramep.kmers_utils import kmers_difference
 from gramep.messages import Messages
-from thefuzz import fuzz
-from thefuzz.process import dedupe
 
 message = Messages()
 """

@@ -25,11 +25,15 @@ enum Value {
     Str(String),
 }
 
-impl ToPyObject for Value {
-    fn to_object(&self, py: Python) -> Py<PyAny> {
+impl<'py> IntoPyObject<'py> for Value {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = std::convert::Infallible;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self {
-            Value::Usize(u) => u.to_object(py),
-            Value::Str(s) => s.to_object(py),
+            Value::Usize(u) => Ok(u.into_pyobject(py)?.into_any()),
+            Value::Str(s) => Ok(s.into_pyobject(py)?.into_any()),
         }
     }
 }
@@ -1419,7 +1423,13 @@ fn variants_intersection(
         }
     }
 
-    return Python::with_gil(|py| (intersection_kmers, intersection_kmers_sets).to_object(py));
+    return Python::attach(|py| {
+        (intersection_kmers, intersection_kmers_sets)
+            .into_pyobject(py)
+            .unwrap()
+            .into_any()
+            .unbind()
+    });
 }
 
 #[pyfunction]
@@ -1495,7 +1505,13 @@ fn get_freq_kmers(diffs: FxHashMap<String, Vec<String>>) -> Py<PyAny> {
 
     let var_list = Vec::from_iter(var_list);
 
-    return Python::with_gil(|py| (freqs, var_list).to_object(py));
+    return Python::attach(|py| {
+        (freqs, var_list)
+            .into_pyobject(py)
+            .unwrap()
+            .into_any()
+            .unbind()
+    });
 }
 
 // #[pyfunction]
@@ -1603,7 +1619,7 @@ fn kmers_analysis(
     mode: String,
     batch_size: usize,
 ) -> PyResult<Py<PyAny>> {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         // Load reference sequence
         let ref_reader = fasta::Reader::from_file(&ref_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?
@@ -1688,7 +1704,7 @@ fn kmers_analysis(
             })
             .collect();
 
-        Ok(variations_positions.to_object(py))
+        Ok(variations_positions.into_pyobject(py)?.into_any().unbind())
     })
 }
 
@@ -1703,7 +1719,13 @@ fn get_kmers(
 ) -> PyResult<Py<PyAny>> {
     let result = get_kmers_impl(seq_path, k, step, dict, reference, batch_size);
     match result {
-        Ok(final_positions) => Python::with_gil(|py| Ok(final_positions.to_object(py))),
+        Ok(final_positions) => Python::attach(|py| {
+            let positions = pyo3::types::PyDict::new(py);
+            for (kmer, kmer_positions) in final_positions {
+                positions.set_item(kmer, pyo3::types::PyList::new(py, kmer_positions)?)?;
+            }
+            Ok(positions.into_any().unbind())
+        }),
         Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
             e.to_string(),
         )),
@@ -1738,7 +1760,7 @@ fn load_sequences_classify(
         .flatten()
         .collect::<Vec<FxHashMap<String, Value>>>();
 
-    return Python::with_gil(|py| samples.to_object(py));
+    return Python::attach(|py| samples.into_pyobject(py).unwrap().into_any().unbind());
 }
 
 #[pymodule]
